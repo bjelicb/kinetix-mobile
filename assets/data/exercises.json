@@ -1,0 +1,541 @@
+{
+  "exercises": [
+    {
+      "id": "bench-press",
+      "name": "Bench Press",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Barbell", "Bench"],
+      "instructions": "Lie flat on bench, grip bar slightly wider than shoulder-width. Lower bar to chest, then press up explosively."
+    },
+    {
+      "id": "incline-bench-press",
+      "name": "Incline Bench Press",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Barbell", "Bench"],
+      "instructions": "Set bench to 30-45 degree incline. Press bar from upper chest position."
+    },
+    {
+      "id": "dumbbell-flyes",
+      "name": "Dumbbell Flyes",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Dumbbells", "Bench"],
+      "instructions": "Lie on bench, arms extended with slight bend. Lower dumbbells in wide arc, then bring together."
+    },
+    {
+      "id": "push-ups",
+      "name": "Push-ups",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Bodyweight"],
+      "instructions": "Start in plank position, lower body until chest nearly touches floor, then push back up."
+    },
+    {
+      "id": "cable-flyes",
+      "name": "Cable Flyes",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Cable"],
+      "instructions": "Stand between cable machines, pull handles together in front of chest with slight bend in arms."
+    },
+    {
+      "id": "deadlift",
+      "name": "Deadlift",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Barbell"],
+      "instructions": "Stand with feet hip-width, grip bar just outside legs. Keep back straight, lift by extending hips and knees."
+    },
+    {
+      "id": "barbell-row",
+      "name": "Barbell Row",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Barbell"],
+      "instructions": "Bend at hips, keep back straight. Pull bar to lower chest/upper abdomen, squeeze shoulder blades."
+    },
+    {
+      "id": "pull-ups",
+      "name": "Pull-ups",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Bodyweight"],
+      "instructions": "Hang from bar with overhand grip. Pull body up until chin clears bar, then lower with control."
+    },
+    {
+      "id": "lat-pulldown",
+      "name": "Lat Pulldown",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Machine", "Cable"],
+      "instructions": "Sit at lat pulldown machine, pull bar to upper chest while leaning slightly back."
+    },
+    {
+      "id": "t-bar-row",
+      "name": "T-Bar Row",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Barbell", "Machine"],
+      "instructions": "Straddle T-bar, pull weight to chest while keeping torso stable."
+    },
+    {
+      "id": "seated-cable-row",
+      "name": "Seated Cable Row",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Cable", "Machine"],
+      "instructions": "Sit at cable row machine, pull handle to lower chest, squeeze shoulder blades together."
+    },
+    {
+      "id": "squat",
+      "name": "Squat",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Barbell"],
+      "instructions": "Stand with feet shoulder-width, bar on upper back. Lower by bending knees and hips, keep chest up."
+    },
+    {
+      "id": "leg-press",
+      "name": "Leg Press",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Machine"],
+      "instructions": "Sit in leg press machine, place feet on platform. Lower weight by bending knees, then press up."
+    },
+    {
+      "id": "leg-curl",
+      "name": "Leg Curl",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Machine"],
+      "instructions": "Lie face down on leg curl machine, curl heels toward glutes, then lower with control."
+    },
+    {
+      "id": "leg-extension",
+      "name": "Leg Extension",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Machine"],
+      "instructions": "Sit in leg extension machine, extend legs to lift weight, squeeze quads at top."
+    },
+    {
+      "id": "lunges",
+      "name": "Lunges",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Bodyweight", "Dumbbells", "Barbell"],
+      "instructions": "Step forward into lunge position, lower back knee toward ground, then push back to start."
+    },
+    {
+      "id": "romanian-deadlift",
+      "name": "Romanian Deadlift",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Barbell", "Dumbbells"],
+      "instructions": "Hold bar with slight knee bend, hinge at hips, lower bar along legs, feel stretch in hamstrings."
+    },
+    {
+      "id": "calf-raise",
+      "name": "Calf Raise",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Bodyweight", "Machine", "Dumbbells"],
+      "instructions": "Stand on balls of feet, raise up onto toes, squeeze calves, then lower slowly."
+    },
+    {
+      "id": "overhead-press",
+      "name": "Overhead Press",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Barbell", "Dumbbells"],
+      "instructions": "Press bar from shoulder level to overhead, keep core tight, avoid arching back excessively."
+    },
+    {
+      "id": "lateral-raise",
+      "name": "Lateral Raise",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Dumbbells", "Cable"],
+      "instructions": "Raise arms out to sides until parallel to floor, slight bend in elbows, lower with control."
+    },
+    {
+      "id": "front-raise",
+      "name": "Front Raise",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Dumbbells", "Cable", "Barbell"],
+      "instructions": "Raise weight(s) in front of body to shoulder height, lower slowly."
+    },
+    {
+      "id": "rear-delt-fly",
+      "name": "Rear Delt Fly",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Dumbbells", "Cable", "Machine"],
+      "instructions": "Bend forward slightly, raise arms out to sides, focus on rear deltoids."
+    },
+    {
+      "id": "shoulder-press-machine",
+      "name": "Shoulder Press Machine",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Machine"],
+      "instructions": "Sit at shoulder press machine, press handles overhead, lower with control."
+    },
+    {
+      "id": "bicep-curl",
+      "name": "Bicep Curl",
+      "targetMuscle": "Biceps",
+      "category": "Arms",
+      "equipment": ["Dumbbells", "Barbell", "Cable"],
+      "instructions": "Curl weight from extended arm position to shoulder, squeeze biceps, lower slowly."
+    },
+    {
+      "id": "hammer-curl",
+      "name": "Hammer Curl",
+      "targetMuscle": "Biceps",
+      "category": "Arms",
+      "equipment": ["Dumbbells"],
+      "instructions": "Curl dumbbells with neutral grip (palms facing each other), targets brachialis."
+    },
+    {
+      "id": "tricep-dip",
+      "name": "Tricep Dip",
+      "targetMuscle": "Triceps",
+      "category": "Arms",
+      "equipment": ["Bodyweight"],
+      "instructions": "Lower body by bending arms, keep elbows close to body, push back up."
+    },
+    {
+      "id": "tricep-pushdown",
+      "name": "Tricep Pushdown",
+      "targetMuscle": "Triceps",
+      "category": "Arms",
+      "equipment": ["Cable"],
+      "instructions": "Push cable handle down, extend arms fully, squeeze triceps, return slowly."
+    },
+    {
+      "id": "close-grip-bench-press",
+      "name": "Close Grip Bench Press",
+      "targetMuscle": "Triceps",
+      "category": "Arms",
+      "equipment": ["Barbell", "Bench"],
+      "instructions": "Bench press with hands closer than shoulder-width, focuses on triceps."
+    },
+    {
+      "id": "preacher-curl",
+      "name": "Preacher Curl",
+      "targetMuscle": "Biceps",
+      "category": "Arms",
+      "equipment": ["Barbell", "Dumbbells", "Machine"],
+      "instructions": "Curl weight on preacher bench, isolates biceps, prevents swinging."
+    },
+    {
+      "id": "cable-curl",
+      "name": "Cable Curl",
+      "targetMuscle": "Biceps",
+      "category": "Arms",
+      "equipment": ["Cable"],
+      "instructions": "Curl cable handle, provides constant tension throughout movement."
+    },
+    {
+      "id": "overhead-tricep-extension",
+      "name": "Overhead Tricep Extension",
+      "targetMuscle": "Triceps",
+      "category": "Arms",
+      "equipment": ["Dumbbells", "Cable"],
+      "instructions": "Extend weight overhead, lower behind head by bending elbows, then extend."
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Hold body in straight line, support on forearms and toes, engage core."
+    },
+    {
+      "id": "crunches",
+      "name": "Crunches",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Lie on back, lift shoulders toward knees, crunch abs, lower with control."
+    },
+    {
+      "id": "russian-twist",
+      "name": "Russian Twist",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight", "Dumbbell", "Kettlebells"],
+      "instructions": "Sit with knees bent, lean back slightly, rotate torso side to side."
+    },
+    {
+      "id": "leg-raise",
+      "name": "Leg Raise",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Lie on back, raise legs to vertical, lower with control, keep lower back pressed down."
+    },
+    {
+      "id": "mountain-climbers",
+      "name": "Mountain Climbers",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Start in plank, alternate bringing knees to chest in running motion."
+    },
+    {
+      "id": "ab-wheel-rollout",
+      "name": "Ab Wheel Rollout",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Kneel, roll ab wheel forward while keeping core tight, roll back to start."
+    },
+    {
+      "id": "decline-bench-press",
+      "name": "Decline Bench Press",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Barbell", "Bench"],
+      "instructions": "Press bar on decline bench, targets lower chest."
+    },
+    {
+      "id": "chest-dips",
+      "name": "Chest Dips",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Bodyweight"],
+      "instructions": "Dip with forward lean, targets chest and triceps."
+    },
+    {
+      "id": "pike-push-up",
+      "name": "Pike Push-up",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Bodyweight"],
+      "instructions": "Push-up in pike position, targets shoulders."
+    },
+    {
+      "id": "face-pull",
+      "name": "Face Pull",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Cable"],
+      "instructions": "Pull cable to face level, external rotation, targets rear delts and upper back."
+    },
+    {
+      "id": "barbell-shrug",
+      "name": "Barbell Shrug",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Barbell", "Dumbbells"],
+      "instructions": "Lift shoulders up toward ears, hold briefly, lower slowly."
+    },
+    {
+      "id": "good-morning",
+      "name": "Good Morning",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Barbell"],
+      "instructions": "Bend forward at hips with bar on back, targets hamstrings and lower back."
+    },
+    {
+      "id": "bulgarian-split-squat",
+      "name": "Bulgarian Split Squat",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Bodyweight", "Dumbbells", "Barbell"],
+      "instructions": "Rear foot elevated, lunge down, targets quads and glutes."
+    },
+    {
+      "id": "hip-thrust",
+      "name": "Hip Thrust",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Barbell", "Bodyweight"],
+      "instructions": "Thrust hips up with weight on hips, targets glutes."
+    },
+    {
+      "id": "goblet-squat",
+      "name": "Goblet Squat",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Dumbbells", "Kettlebells"],
+      "instructions": "Hold weight at chest, squat down, targets quads and core."
+    },
+    {
+      "id": "farmer-walk",
+      "name": "Farmer Walk",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Dumbbells", "Kettlebells"],
+      "instructions": "Walk while carrying heavy weights, targets grip and core stability."
+    },
+    {
+      "id": "kettlebell-swing",
+      "name": "Kettlebell Swing",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Kettlebells"],
+      "instructions": "Swing kettlebell from between legs to chest height, hip drive movement."
+    },
+    {
+      "id": "bent-over-row",
+      "name": "Bent Over Row",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Dumbbells", "Barbell"],
+      "instructions": "Bend at hips, row weight to lower chest, squeeze shoulder blades."
+    },
+    {
+      "id": "arnold-press",
+      "name": "Arnold Press",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Dumbbells"],
+      "instructions": "Start with palms facing you, rotate and press overhead, targets all deltoid heads."
+    },
+    {
+      "id": "upright-row",
+      "name": "Upright Row",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Barbell", "Dumbbells", "Cable"],
+      "instructions": "Pull weight up along body to chest level, targets shoulders and traps."
+    },
+    {
+      "id": "reverse-fly",
+      "name": "Reverse Fly",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Dumbbells", "Cable", "Machine"],
+      "instructions": "Bend forward, raise arms out to sides, targets rear delts and rhomboids."
+    },
+    {
+      "id": "cable-crossover",
+      "name": "Cable Crossover",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Cable"],
+      "instructions": "Pull cable handles together in front of chest, targets inner chest."
+    },
+    {
+      "id": "incline-dumbbell-press",
+      "name": "Incline Dumbbell Press",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Dumbbells", "Bench"],
+      "instructions": "Press dumbbells on incline bench, targets upper chest."
+    },
+    {
+      "id": "dumbbell-pullover",
+      "name": "Dumbbell Pullover",
+      "targetMuscle": "Chest",
+      "category": "Chest",
+      "equipment": ["Dumbbells", "Bench"],
+      "instructions": "Lower dumbbell behind head, pull over chest, targets chest and serratus."
+    },
+    {
+      "id": "rack-pull",
+      "name": "Rack Pull",
+      "targetMuscle": "Back",
+      "category": "Back",
+      "equipment": ["Barbell"],
+      "instructions": "Deadlift from elevated position, allows heavier weight, targets upper back and traps."
+    },
+    {
+      "id": "pistol-squat",
+      "name": "Pistol Squat",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Bodyweight"],
+      "instructions": "Single leg squat, requires balance and mobility, advanced movement."
+    },
+    {
+      "id": "wall-sit",
+      "name": "Wall Sit",
+      "targetMuscle": "Legs",
+      "category": "Legs",
+      "equipment": ["Bodyweight"],
+      "instructions": "Hold squat position against wall, isometric exercise for quads."
+    },
+    {
+      "id": "side-plank",
+      "name": "Side Plank",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Hold body in straight line on side, support on forearm and feet, targets obliques."
+    },
+    {
+      "id": "dead-bug",
+      "name": "Dead Bug",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Lie on back, extend opposite arm and leg, return, targets deep core."
+    },
+    {
+      "id": "hanging-leg-raise",
+      "name": "Hanging Leg Raise",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Bodyweight"],
+      "instructions": "Hang from bar, raise legs to parallel or higher, targets lower abs."
+    },
+    {
+      "id": "cable-crunch",
+      "name": "Cable Crunch",
+      "targetMuscle": "Core",
+      "category": "Core",
+      "equipment": ["Cable"],
+      "instructions": "Kneel at cable machine, crunch down, provides resistance throughout movement."
+    },
+    {
+      "id": "dumbbell-lateral-raise",
+      "name": "Dumbbell Lateral Raise",
+      "targetMuscle": "Shoulders",
+      "category": "Shoulders",
+      "equipment": ["Dumbbells"],
+      "instructions": "Raise dumbbells out to sides, targets medial deltoids."
+    },
+    {
+      "id": "reverse-grip-barbell-curl",
+      "name": "Reverse Grip Barbell Curl",
+      "targetMuscle": "Biceps",
+      "category": "Arms",
+      "equipment": ["Barbell"],
+      "instructions": "Curl with overhand grip, targets brachialis and forearms."
+    },
+    {
+      "id": "21s",
+      "name": "21s (Bicep Curls)",
+      "targetMuscle": "Biceps",
+      "category": "Arms",
+      "equipment": ["Barbell", "Dumbbells"],
+      "instructions": "7 reps bottom half, 7 reps top half, 7 full reps, intense bicep pump."
+    },
+    {
+      "id": "skull-crusher",
+      "name": "Skull Crusher",
+      "targetMuscle": "Triceps",
+      "category": "Arms",
+      "equipment": ["Barbell", "Dumbbells"],
+      "instructions": "Lower weight to forehead, extend arms, targets triceps."
+    },
+    {
+      "id": "diamond-push-up",
+      "name": "Diamond Push-up",
+      "targetMuscle": "Triceps",
+      "category": "Arms",
+      "equipment": ["Bodyweight"],
+      "instructions": "Push-up with hands in diamond shape, targets triceps and inner chest."
+    }
+  ]
+}
+
