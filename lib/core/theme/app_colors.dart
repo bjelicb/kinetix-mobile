@@ -17,15 +17,15 @@ class AppColors {
   static const Color primaryEnd = Color(0xFFEC4899); // Pink
   static const Color primary = primaryMiddle; // Default primary
   
-  // Secondary Gradient Colors (Cyan)
-  static const Color secondaryStart = Color(0xFF00F0FF); // Bright Cyan
-  static const Color secondaryEnd = Color(0xFF00D4FF); // Lighter Cyan
+  // Secondary Gradient Colors (Blue-Cyan, darker for contrast)
+  static const Color secondaryStart = Color(0xFF0EA5E9);
+  static const Color secondaryEnd = Color(0xFF3B82F6);
   static const Color secondary = secondaryStart; // Default secondary
   
   // Accent Colors
   static const Color accentOrange = Color(0xFFFF6B35);
   static const Color accentYellow = Color(0xFFFFD23F);
-  static const Color accentGreen = Color(0xFF00FF88);
+  static const Color accentGreen = Color(0xFF10B981);
   
   // Text Colors
   static const Color textPrimary = Color(0xFFFFFFFF); // White
@@ -34,8 +34,8 @@ class AppColors {
   static const Color textDisabled = Color(0xFF4A4A4A); // Disabled text
   
   // Status Colors
-  static const Color success = Color(0xFF00FF88);
-  static const Color successDark = Color(0xFF00CC66);
+  static const Color success = Color(0xFF10B981);
+  static const Color successDark = Color(0xFF047857);
   static const Color warning = Color(0xFFFFAA00);
   static const Color warningDark = Color(0xFFFF8800);
   static const Color error = Color(0xFFFF003C);
@@ -60,6 +60,7 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [secondaryStart, secondaryEnd],
+    stops: [0.0, 1.0],
   );
   
   static const LinearGradient backgroundGradient = LinearGradient(
@@ -78,6 +79,7 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [success, successDark],
+    stops: [0.0, 1.0],
   );
   
   // Neon Glow Colors
@@ -86,3 +88,10 @@ class AppColors {
   static Color neonGlowSuccess = success.withValues(alpha: 0.5);
 }
 
+class AppSpacing {
+  static const double xs = 8.0;
+  static const double sm = 12.0;
+  static const double md = 16.0;
+  static const double lg = 20.0;
+  static const double xl = 24.0;
+}

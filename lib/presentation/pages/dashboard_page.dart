@@ -99,7 +99,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     // Search Bar
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                         child: kinetix_search.SearchBar(
                           hintText: 'Search workouts...',
                           onChanged: (query) {
@@ -111,7 +111,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
                     
                     // Quick Stats (Client only)
                     if (!isTrainer)
@@ -123,7 +123,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     if (!isTrainer)
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                           child: NutritionSummaryCard(
                             calories: 1850,
                             protein: 120,
@@ -169,7 +169,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final userName = user?.name ?? 'User';
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -223,7 +223,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           // Streak Counter
           GradientCard(
             gradient: AppGradients.purplePink,
@@ -265,28 +265,31 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget _buildQuickStats(BuildContext context) {
     return Container(
       height: 105,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      child: Row(
         children: [
-          _buildStatCard(context, '12', 'Workouts\nThis Week', AppGradients.primary),
-          const SizedBox(width: 12),
-          _buildStatCard(context, '2.4k', 'Total\nVolume (kg)', AppGradients.secondary),
-          const SizedBox(width: 12),
-          _buildStatCard(context, '85%', 'Completion\nRate', AppGradients.success),
+          Expanded(child: _buildStatCardExpanded(context, '12', 'Workouts\nThis Week', AppGradients.primary)),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: _buildStatCardExpanded(context, '2.4k', 'Total\nVolume (kg)', AppGradients.secondary)),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: _buildStatCardExpanded(context, '85%', 'Completion\nRate', AppGradients.success)),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String value, String label, Gradient gradient) {
+
+  Widget _buildStatCardExpanded(BuildContext context, String value, String label, Gradient gradient) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallPhone = screenWidth < 360;
     return SizedBox(
-      width: 100,
-      height: 90,
+      height: isSmallPhone ? 88 : 96,
       child: GradientCard(
         gradient: gradient,
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         margin: EdgeInsets.zero,
+        elevation: 6,
+        pressEffect: true,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +300,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
-                fontSize: 22,
+                fontSize: isSmallPhone ? 20 : 22,
               ),
             ),
             const SizedBox(height: 2),
@@ -306,7 +309,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.textPrimary.withValues(alpha: 0.8),
-                  fontSize: 10,
+                  fontSize: isSmallPhone ? 9.5 : 10,
                   height: 1.1,
                 ),
                 maxLines: 2,
@@ -323,15 +326,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final todayWorkout = workouts.isNotEmpty ? workouts.first : null;
     
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             "Today's Mission",
-            style: Theme.of(context).textTheme.headlineMedium,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
             if (todayWorkout == null)
               EmptyState(
                 icon: Icons.fitness_center_rounded,
@@ -348,6 +351,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               gradient: AppGradients.primary,
               padding: const EdgeInsets.all(20),
               showGlow: true,
+              pressEffect: true,
               onTap: () {
                 AppHaptic.selection();
                 context.go('/workout/${todayWorkout.id}');
@@ -393,7 +397,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   NeonButton(
                     text: todayWorkout.isCompleted ? 'View Details' : 'Start Workout',
                     icon: todayWorkout.isCompleted ? Icons.visibility : Icons.play_arrow,
@@ -413,15 +417,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Widget _buildClientContent(BuildContext context, workouts, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Recent Workouts',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           if (workouts.isEmpty)
             EmptyState(
               icon: Icons.fitness_center_rounded,
@@ -443,7 +447,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 itemBuilder: (context, index) {
                   final workout = workouts[index];
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: GradientCard(
                       gradient: AppGradients.card,
                       padding: const EdgeInsets.all(16),
@@ -511,12 +515,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Widget _buildTrainerContent(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClientAlertsCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.lg),
           AppointmentsCard(),
         ],
       ),
@@ -525,12 +529,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Widget _buildLoadingState(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         ShimmerCard(height: 200),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.md),
         ShimmerCard(height: 120),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.md),
         ShimmerCard(height: 120),
       ],
     );
@@ -539,7 +543,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget _buildErrorState(BuildContext context, error) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -548,12 +552,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               size: 64,
               color: AppColors.error,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Error loading dashboard',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               error.toString(),
               style: Theme.of(context).textTheme.bodyMedium,

@@ -47,7 +47,7 @@ class AppointmentsCard extends StatelessWidget {
     if (todayAppointments.isEmpty) {
       return GradientCard(
         gradient: AppGradients.card,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
             Icon(
@@ -55,12 +55,12 @@ class AppointmentsCard extends StatelessWidget {
               size: 48,
               color: AppColors.textSecondary,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'No appointments today',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs/2),
             Text(
               'You have a free schedule',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -74,7 +74,7 @@ class AppointmentsCard extends StatelessWidget {
 
     return GradientCard(
       gradient: AppGradients.card,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -83,10 +83,10 @@ class AppointmentsCard extends StatelessWidget {
             children: [
               Text(
                 "Today's Appointments",
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs/2),
                 decoration: BoxDecoration(
                   gradient: AppGradients.primary,
                   borderRadius: BorderRadius.circular(12),
@@ -101,7 +101,7 @@ class AppointmentsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           ...todayAppointments.map((apt) => _buildAppointmentItem(context, apt)),
         ],
       ),
@@ -112,7 +112,7 @@ class AppointmentsCard extends StatelessWidget {
     final isPast = appointment.time.isBefore(DateTime.now());
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: InkWell(
         onTap: () {
           AppHaptic.light();
@@ -125,7 +125,7 @@ class AppointmentsCard extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
@@ -141,7 +141,7 @@ class AppointmentsCard extends StatelessWidget {
               // Time
               Container(
                 width: 60,
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppSpacing.xs),
                 decoration: BoxDecoration(
                   gradient: isPast ? AppGradients.card : AppGradients.primary,
                   borderRadius: BorderRadius.circular(8),
@@ -165,7 +165,7 @@ class AppointmentsCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               // Client Info
               Expanded(
                 child: Column(
@@ -176,7 +176,7 @@ class AppointmentsCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     if (appointment.notes != null && appointment.notes!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs/2),
                       Text(
                         appointment.notes!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

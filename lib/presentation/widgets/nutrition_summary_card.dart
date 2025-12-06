@@ -27,7 +27,7 @@ class NutritionSummaryCard extends StatelessWidget {
 
     return GradientCard(
       gradient: AppGradients.card,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -37,7 +37,7 @@ class NutritionSummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                 'Nutrition Summary',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               Icon(
@@ -46,7 +46,7 @@ class NutritionSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.lg),
           
           // Calories
           _buildMacroRow(
@@ -57,7 +57,7 @@ class NutritionSummaryCard extends StatelessWidget {
             'kcal',
             AppGradients.primary,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           
           // Protein
           _buildMacroRow(
@@ -68,7 +68,7 @@ class NutritionSummaryCard extends StatelessWidget {
             'g',
             AppGradients.secondary,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           
           // Carbs
           _buildMacroRow(
@@ -79,7 +79,7 @@ class NutritionSummaryCard extends StatelessWidget {
             'g',
             AppGradients.purplePink,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           
           // Fats
           _buildMacroRow(
@@ -129,7 +129,7 @@ class NutritionSummaryCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
         Stack(
           children: [
             Container(

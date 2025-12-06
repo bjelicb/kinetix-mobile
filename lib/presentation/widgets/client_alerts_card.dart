@@ -38,7 +38,7 @@ class ClientAlertsCard extends StatelessWidget {
     if (displayAlerts.isEmpty) {
       return GradientCard(
         gradient: AppGradients.card,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
             Icon(
@@ -46,12 +46,12 @@ class ClientAlertsCard extends StatelessWidget {
               size: 48,
               color: AppColors.success,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'No alerts',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs/2),
             Text(
               'All clients are on track',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -65,7 +65,7 @@ class ClientAlertsCard extends StatelessWidget {
 
     return GradientCard(
       gradient: AppGradients.card,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -74,10 +74,10 @@ class ClientAlertsCard extends StatelessWidget {
             children: [
               Text(
                 'Client Alerts',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs/2),
                 decoration: BoxDecoration(
                   gradient: AppGradients.secondary,
                   borderRadius: BorderRadius.circular(12),
@@ -92,7 +92,7 @@ class ClientAlertsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           ...displayAlerts.take(5).map((alert) => _buildAlertItem(context, alert)),
         ],
       ),
@@ -122,7 +122,7 @@ class ClientAlertsCard extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: InkWell(
         onTap: () {
           if (onAlertTap != null) {
@@ -134,7 +134,7 @@ class ClientAlertsCard extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
@@ -146,7 +146,7 @@ class ClientAlertsCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
@@ -157,7 +157,7 @@ class ClientAlertsCard extends StatelessWidget {
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +166,7 @@ class ClientAlertsCard extends StatelessWidget {
                       alert.clientName,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs/2),
                     Text(
                       alert.message,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -178,7 +178,7 @@ class ClientAlertsCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 _formatTime(alert.timestamp),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(

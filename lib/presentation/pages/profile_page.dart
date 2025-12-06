@@ -101,7 +101,7 @@ class ProfilePage extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, user) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
           // Profile Picture
@@ -130,17 +130,17 @@ class ProfilePage extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           Text(
             user.name,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs/2),
           Text(
             user.email,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           // Role Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -256,48 +256,49 @@ class ProfilePage extends ConsumerWidget {
             // Quick Stats
             Container(
               height: 120,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
                   _buildStatCard(context, '$completedWorkouts', 'Completed\nWorkouts', AppGradients.primary),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.sm),
                   _buildStatCard(context, '$streak', 'Day\nStreak', AppGradients.secondary),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.sm),
                   _buildStatCard(context, '${(totalVolume / 1000).toStringAsFixed(1)}k', 'Total\nVolume (kg)', AppGradients.success),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             
             // Volume Progression Chart
             if (volumeDataPoints.length > 1)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: ProgressChart(
                   dataPoints: volumeDataPoints,
                   title: 'Volume Progression (Last 7 Workouts)',
                   yAxisLabel: 'Volume (kg)',
                 ),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             
             // Personal Records
             if (prs.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: PRTracker(personalRecords: prs),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             
             // Best Exercises
             if (bestExercises.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: GradientCard(
-                  gradient: AppGradients.card,
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: GradientCard(
+                gradient: AppGradients.card,
+                padding: const EdgeInsets.all(20),
+                pressEffect: true,
+                child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -341,7 +342,7 @@ class ProfilePage extends ConsumerWidget {
             
             // View Full History Button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: OutlinedButton.icon(
                 onPressed: () {
                   AppHaptic.selection();
@@ -352,7 +353,7 @@ class ProfilePage extends ConsumerWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -416,53 +417,65 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Widget _buildStatCard(BuildContext context, String value, String label, Gradient gradient) {
-    return GradientCard(
-      gradient: gradient,
-      padding: const EdgeInsets.all(16),
-      margin: EdgeInsets.zero,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallPhone = screenWidth < 360;
+    final cardWidth = isSmallPhone ? 96.0 : 108.0;
+    final cardHeight = isSmallPhone ? 96.0 : 108.0;
+    return SizedBox(
+      width: cardWidth,
+      height: cardHeight,
+      child: GradientCard(
+        gradient: gradient,
+        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.zero,
+        elevation: 6,
+        pressEffect: true,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textPrimary.withValues(alpha: 0.8),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textPrimary.withValues(alpha: 0.8),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPersonalInfo(BuildContext context, user) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Personal Information',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           GradientCard(
             gradient: AppGradients.card,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             child: Column(
               children: [
                 _buildInfoRow(context, 'Name', user.name, Icons.person_rounded),
-                const Divider(height: 32),
+                const SizedBox(height: AppSpacing.sm),
                 _buildInfoRow(context, 'Email', user.email, Icons.email_rounded),
-                const Divider(height: 32),
+                const SizedBox(height: AppSpacing.sm),
                 _buildInfoRow(context, 'Role', user.role, Icons.badge_rounded),
               ],
             ),
@@ -473,34 +486,39 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            gradient: AppGradients.primary,
-            borderRadius: BorderRadius.circular(8),
+    return SizedBox(
+      height: 64,
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: AppGradients.primary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: AppColors.textPrimary, size: 20),
           ),
-          child: Icon(icon, color: AppColors.textPrimary, size: 20),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -510,18 +528,18 @@ class ProfilePage extends ConsumerWidget {
     final isTrainer = user?.role == 'TRAINER';
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Settings',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           GradientCard(
             gradient: AppGradients.card,
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Column(
               children: [
                 _buildSettingTile(
@@ -533,7 +551,7 @@ class ProfilePage extends ConsumerWidget {
                   },
                 ),
                 if (isTrainer) ...[
-                  const Divider(height: 1),
+                  const SizedBox(height: AppSpacing.sm),
                   _buildSettingTile(
                     context,
                     'Analytics',
@@ -543,7 +561,7 @@ class ProfilePage extends ConsumerWidget {
                     },
                   ),
                 ],
-                const Divider(height: 1),
+                const SizedBox(height: AppSpacing.sm),
                 _buildSettingTile(
                   context,
                   'Settings',
@@ -553,7 +571,7 @@ class ProfilePage extends ConsumerWidget {
                     context.push('/settings');
                   },
                 ),
-                const Divider(height: 1),
+                const SizedBox(height: AppSpacing.sm),
                 _buildSettingTile(
                   context,
                   'About',
@@ -574,27 +592,46 @@ class ProfilePage extends ConsumerWidget {
     IconData icon,
     VoidCallback onTap,
   ) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          gradient: AppGradients.primary,
-          borderRadius: BorderRadius.circular(8),
+    return SizedBox(
+      height: 64,
+      child: InkWell(
+        onTap: () {
+          AppHaptic.selection();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: AppGradients.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: AppColors.textPrimary, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
         ),
-        child: Icon(icon, color: AppColors.textPrimary, size: 20),
       ),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      trailing: Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textSecondary,
-      ),
-      onTap: () {
-        AppHaptic.selection();
-        onTap();
-      },
     );
   }
 
@@ -659,7 +696,7 @@ class ProfilePage extends ConsumerWidget {
 
   Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: NeonButton(
         text: 'Logout',
         icon: Icons.logout_rounded,

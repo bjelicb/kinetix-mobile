@@ -6,7 +6,6 @@ import '../../domain/entities/workout.dart';
 import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
-import '../../presentation/widgets/empty_state.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
 import '../../presentation/widgets/neon_button.dart';
 import '../../core/utils/haptic_feedback.dart';
@@ -85,21 +84,35 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       workoutsByDate.putIfAbsent(date, () => []).add(workout);
     }
 
-    // Calculate max height based on screen size and calendar format
+    // Calculate responsive sizes based on screen and format
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallPhone = screenHeight < 700 || screenWidth < 360;
+    final isTwoWeeks = _calendarFormat == CalendarFormat.twoWeeks;
+    final isWeek = _calendarFormat == CalendarFormat.week;
     final maxCalendarHeight = _calendarFormat == CalendarFormat.month 
-        ? screenHeight * 0.45  // 45% of screen for month view
-        : screenHeight * 0.25; // 25% of screen for week view
+        ? screenHeight * (isSmallPhone ? 0.40 : 0.45)
+        : isTwoWeeks
+            ? screenHeight * (isSmallPhone ? 0.28 : 0.30)
+            : screenHeight * (isSmallPhone ? 0.18 : 0.22);
+    final rowHeight = _calendarFormat == CalendarFormat.month
+        ? (isSmallPhone ? 38.0 : 42.0)
+        : isTwoWeeks
+            ? (isSmallPhone ? 34.0 : 38.0)
+            : (isSmallPhone ? 28.0 : 32.0);
+    final daysOfWeekHeight = isSmallPhone 
+        ? (isWeek ? 16.0 : 18.0)
+        : (isWeek ? 18.0 : 22.0);
 
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(AppSpacing.lg),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: maxCalendarHeight,
         ),
         child: GradientCard(
           gradient: AppGradients.card,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: TableCalendar(
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
@@ -107,6 +120,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           calendarFormat: _calendarFormat,
           startingDayOfWeek: StartingDayOfWeek.monday,
+          shouldFillViewport: true,
+          rowHeight: rowHeight,
+          daysOfWeekHeight: daysOfWeekHeight,
           calendarStyle: CalendarStyle(
             outsideDaysVisible: false,
             weekendTextStyle: TextStyle(color: AppColors.textSecondary),
@@ -138,8 +154,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               gradient: AppGradients.primary,
               borderRadius: BorderRadius.circular(8),
             ),
-            formatButtonTextStyle: const TextStyle(
+            formatButtonTextStyle: TextStyle(
               color: AppColors.textPrimary,
+              fontSize: isSmallPhone ? 12 : 14,
             ),
             leftChevronIcon: Icon(
               Icons.chevron_left_rounded,
@@ -149,11 +166,44 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               Icons.chevron_right_rounded,
               color: AppColors.textPrimary,
             ),
-            titleTextStyle: Theme.of(context).textTheme.titleLarge ?? const TextStyle(),
+            titleTextStyle: (Theme.of(context).textTheme.titleLarge ?? const TextStyle()).copyWith(
+              fontSize: isSmallPhone ? 18 : null,
+            ),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
             weekdayStyle: TextStyle(color: AppColors.textPrimary),
             weekendStyle: TextStyle(color: AppColors.textSecondary),
+          ),
+          calendarBuilders: CalendarBuilders(
+            headerTitleBuilder: (context, date) {
+              final month = _getMonthName(date.month);
+              final year = date.year.toString();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    year,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: isSmallPhone ? 10 : 11,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      month,
+                      style: (Theme.of(context).textTheme.titleMedium ?? const TextStyle()).copyWith(
+                        fontSize: isSmallPhone ? 16 : 20,
+                        color: AppColors.textPrimary,
+                      ),
+                      softWrap: false,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           eventLoader: (day) {
             final date = DateTime(day.year, day.month, day.day);
@@ -198,68 +248,73 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     }).toList();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             _formatSelectedDate(),
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           if (dayWorkouts.isEmpty)
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  // Adjust padding based on available height
                   final padding = constraints.maxHeight < 200 
                       ? 16.0 
                       : constraints.maxHeight < 300 
                           ? 24.0 
                           : 32.0;
-                  
-                  return Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(padding),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(padding),
-                            decoration: BoxDecoration(
-                              gradient: AppGradients.card,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.fitness_center_rounded,
-                              size: constraints.maxHeight < 200 ? 48 : 64,
-                              color: AppColors.textSecondary,
-                            ),
+
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(padding),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(padding),
+                                decoration: BoxDecoration(
+                                  gradient: AppGradients.card,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.fitness_center_rounded,
+                                  size: constraints.maxHeight < 200 ? 48 : 64,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              SizedBox(height: padding),
+                              Text(
+                                'No workouts scheduled',
+                                style: Theme.of(context).textTheme.headlineSmall,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap + to schedule a workout for this day',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: padding),
+                              NeonButton(
+                                text: 'Schedule Workout',
+                                onPressed: () {
+                                  _showScheduleWorkoutBottomSheet(context, _selectedDay);
+                                },
+                                gradient: AppGradients.primary,
+                              ),
+                            ],
                           ),
-                          SizedBox(height: padding),
-                          Text(
-                            'No workouts scheduled',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap + to schedule a workout for this day',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: padding),
-                          NeonButton(
-                            text: 'Schedule Workout',
-                            onPressed: () {
-                              // TODO: Show add workout dialog
-                            },
-                            gradient: AppGradients.primary,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );
@@ -273,12 +328,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 itemBuilder: (context, index) {
                   final workout = dayWorkouts[index];
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: GradientCard(
                       gradient: workout.isCompleted
                           ? AppGradients.success
                           : AppGradients.card,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      pressEffect: true,
                       onTap: () {
                         AppHaptic.selection();
                         context.go('/workout/${workout.id}');
@@ -286,13 +342,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       child: Row(
                         children: [
                           Container(
-                            width: 50,
-                            height: 50,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
                               gradient: workout.isCompleted
                                   ? AppGradients.success
                                   : AppGradients.primary,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Icon(
                               workout.isCompleted
@@ -301,7 +357,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +366,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                                   workout.name,
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: AppSpacing.xs/2),
                                 Text(
                                   _formatTime(workout.scheduledDate),
                                   style: Theme.of(context).textTheme.bodySmall,
