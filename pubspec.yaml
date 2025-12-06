@@ -16,7 +16,7 @@ dependencies:
   riverpod_annotation: ^2.6.1
 
   # Routing
-  go_router: ^14.6.2
+  go_router: ^17.0.0
 
   # Local Database
   isar: ^3.1.0+1
@@ -25,13 +25,14 @@ dependencies:
   # Networking
   dio: ^5.7.0
   retrofit: ^4.4.1
+  http: ^1.2.2
 
   # Code Generation
   freezed_annotation: ^2.4.1
   json_annotation: ^4.9.0
 
   # UI & Charts
-  fl_chart: ^0.69.2
+  fl_chart: ^1.1.1
   google_fonts: ^6.2.1
   
   # Animations
@@ -39,9 +40,9 @@ dependencies:
   lottie: ^3.1.0
   
   # UI Components
-  table_calendar: ^3.0.9
+  table_calendar: ^3.2.0
   shimmer: ^3.0.0
-  confetti: ^0.7.0
+  confetti: ^0.8.0
   flutter_svg: ^2.0.9
   
   # Image Processing
@@ -57,12 +58,14 @@ dependencies:
   # Utilities
   fpdart: ^1.1.0
   uuid: ^4.5.1
-  package_info_plus: ^8.0.2
-  intl: ^0.19.0
+  package_info_plus: ^9.0.0
+  intl: ^0.20.2
   path_provider: ^2.1.5
   path: ^1.9.0
   shared_preferences: ^2.3.2
   flutter_cache_manager: ^3.4.1
+  share_plus: ^10.1.2
+  workmanager: ^0.9.0+3
 
   # Icons
   cupertino_icons: ^1.0.8
@@ -92,5 +95,6 @@ flutter:
   assets:
     - assets/images/
     - assets/data/exercises.json
+    - assets/data/workout_templates.json
 
   # Fonts (loaded via google_fonts package, no need to add here)

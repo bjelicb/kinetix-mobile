@@ -5,7 +5,6 @@ import '../../core/theme/gradients.dart';
 import '../../core/utils/shared_preferences_service.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../presentation/widgets/gradient_background.dart';
-import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
 
 class OnboardingPage extends StatefulWidget {

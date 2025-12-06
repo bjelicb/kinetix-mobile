@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/gradients.dart';
-import 'glass_container.dart';
 
 class GlassBottomSheet extends StatelessWidget {
   final Widget child;

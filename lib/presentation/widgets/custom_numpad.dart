@@ -164,8 +164,8 @@ class _CustomNumpadState extends State<CustomNumpad> with SingleTickerProviderSt
 
   Widget _buildRow(List<String> numbers) {
     return Row(
-      children: numbers.map((num) => Expanded(
-        child: _buildNumberButton(num),
+      children: numbers.map((number) => Expanded(
+        child: _buildNumberButton(number),
       )).toList(),
     );
   }

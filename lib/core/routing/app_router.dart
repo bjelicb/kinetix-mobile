@@ -13,12 +13,48 @@ import '../../presentation/pages/workout_edit_page.dart';
 import '../../presentation/pages/exercise_selection_page.dart';
 import '../../presentation/pages/check_in_history_page.dart';
 import '../../presentation/pages/analytics_page.dart';
+import '../../presentation/pages/settings_page.dart';
+import '../../presentation/pages/workout_history_page.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import '../../presentation/widgets/custom_bottom_nav.dart';
 import '../../core/theme/animations.dart';
 import '../../core/utils/shared_preferences_service.dart';
+import '../../data/datasources/local_data_source.dart';
+import '../../domain/entities/user.dart';
 
 part 'app_router.g.dart';
+
+/// Helper function to check if user should be required to check in
+/// Returns true if:
+/// - User is a CLIENT (not TRAINER)
+/// - User has a workout scheduled for today
+/// - The workout is NOT completed
+/// - User has NOT already checked in today
+Future<bool> _shouldRequireCheckIn(User? user) async {
+  // If no user, no check-in required
+  if (user == null) return false;
+  
+  // Only clients need to check in
+  if (user.role != 'CLIENT') return false;
+  
+  final localDataSource = LocalDataSource();
+  
+  // Check if user already checked in today
+  final todayCheckIn = await localDataSource.getTodayCheckIn();
+  if (todayCheckIn != null) return false;
+  
+  // Check if user has workouts scheduled for today
+  final todayWorkouts = await localDataSource.getTodayWorkouts();
+  
+  // No workouts today, no check-in required
+  if (todayWorkouts.isEmpty) return false;
+  
+  // Check if any workout is not completed
+  // If all workouts are completed, no check-in required
+  final hasIncompleteWorkout = todayWorkouts.any((workout) => !workout.isCompleted);
+  
+  return hasIncompleteWorkout;
+}
 
 @riverpod
 GoRouter appRouter(AppRouterRef ref) {
@@ -58,6 +94,39 @@ GoRouter appRouter(AppRouterRef ref) {
       // If authenticated and on login, go to home
       if (isAuthenticated && currentLocation == '/login') {
         return '/home';
+      }
+      
+      // Mandatory check-in flow (only for clients with incomplete workout today)
+      if (isAuthenticated) {
+        final user = authState.valueOrNull;
+        
+        // Allow access to check-in pages, login, splash, onboarding without check-in requirement
+        final allowedRoutesWithoutCheckIn = [
+          '/check-in',
+          '/check-in/history',
+          '/login',
+          '/splash',
+          '/onboarding',
+        ];
+        
+        if (allowedRoutesWithoutCheckIn.contains(currentLocation)) {
+          return null; // Allow access
+        }
+        
+        // Check if check-in is required
+        try {
+          final requiresCheckIn = await _shouldRequireCheckIn(user);
+          
+          if (requiresCheckIn) {
+            // Redirect to check-in if not already there or on check-in history
+            if (currentLocation != '/check-in' && currentLocation != '/check-in/history') {
+              return '/check-in';
+            }
+          }
+        } catch (e) {
+          // If error checking check-in requirement, allow access (fail gracefully)
+          // This prevents blocking user if there's a temporary error
+        }
       }
       
       return null;
@@ -150,7 +219,7 @@ GoRouter appRouter(AppRouterRef ref) {
         ),
       ),
       ShellRoute(
-        builder: (context, state, child) => HomeShell(child: child, state: state),
+        builder: (context, state, child) => HomeShell(state: state, child: child),
         routes: [
           GoRoute(
             path: '/home',
@@ -282,6 +351,42 @@ GoRouter appRouter(AppRouterRef ref) {
               scale: scaleAnimation,
               child: FadeTransition(opacity: animation, child: child),
             );
+          },
+          transitionDuration: AppAnimations.pageTransitionDuration,
+        ),
+      ),
+      GoRoute(
+        path: '/settings',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SettingsPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final slideAnimation = Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: AppAnimations.pageTransitionCurve,
+            ));
+            return SlideTransition(position: slideAnimation, child: child);
+          },
+          transitionDuration: AppAnimations.pageTransitionDuration,
+        ),
+      ),
+      GoRoute(
+        path: '/workout-history',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const WorkoutHistoryPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final slideAnimation = Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: AppAnimations.pageTransitionCurve,
+            ));
+            return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
         ),

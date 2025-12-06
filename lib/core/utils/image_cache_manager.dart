@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -15,12 +15,10 @@ class ImageCacheManager {
 
   static const String _cacheKey = 'kinetix_image_cache';
   static const int _maxCacheSize = 100 * 1024 * 1024; // 100MB
-  static const Duration _cacheDuration = Duration(days: 30);
 
   late final CacheManager _cacheManager;
 
   Future<void> init() async {
-    final cacheDir = await getTemporaryDirectory();
     _cacheManager = CacheManager(
       Config(
         _cacheKey,
@@ -44,7 +42,7 @@ class ImageCacheManager {
         return file;
       }
     } catch (e) {
-      print('Error getting cached image: $e');
+      debugPrint('Error getting cached image: $e');
     }
     return null;
   }
@@ -54,7 +52,7 @@ class ImageCacheManager {
       // Save to cache
       await _cacheManager.putFile(imagePath, bytes);
     } catch (e) {
-      print('Error caching image: $e');
+      debugPrint('Error caching image: $e');
     }
   }
 
@@ -62,7 +60,7 @@ class ImageCacheManager {
     try {
       await _cacheManager.emptyCache();
     } catch (e) {
-      print('Error clearing cache: $e');
+      debugPrint('Error clearing cache: $e');
     }
   }
 
@@ -84,7 +82,7 @@ class ImageCacheManager {
       }
       return totalSize;
     } catch (e) {
-      print('Error getting cache size: $e');
+      debugPrint('Error getting cache size: $e');
       return 0;
     }
   }
@@ -97,7 +95,7 @@ class ImageCacheManager {
         await _cacheManager.emptyCache();
       }
     } catch (e) {
-      print('Error evicting cache: $e');
+      debugPrint('Error evicting cache: $e');
     }
   }
 }

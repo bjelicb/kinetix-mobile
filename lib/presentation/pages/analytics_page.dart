@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
 import '../../presentation/controllers/auth_controller.dart';
+import '../../presentation/controllers/analytics_controller.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/strength_progression_chart.dart';
 import '../../presentation/widgets/adherence_chart.dart';
+import '../../presentation/widgets/shimmer_loader.dart';
 
 class AnalyticsPage extends ConsumerStatefulWidget {
   const AnalyticsPage({super.key});
@@ -19,19 +21,35 @@ class AnalyticsPage extends ConsumerStatefulWidget {
 class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String? _selectedClientId;
-  
-  // Mock clients list
-  final List<Map<String, String>> _mockClients = [
-    {'id': '1', 'name': 'John Doe'},
-    {'id': '2', 'name': 'Jane Smith'},
-    {'id': '3', 'name': 'Mike Johnson'},
-  ];
+  ClientAnalytics? _clientAnalytics;
+  bool _isLoadingAnalytics = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _selectedClientId = _mockClients.isNotEmpty ? _mockClients.first['id'] : null;
+  }
+  
+  Future<void> _loadClientAnalytics(String clientId, String clientName) async {
+    if (_selectedClientId == clientId && _clientAnalytics != null) return;
+    
+    setState(() {
+      _isLoadingAnalytics = true;
+      _selectedClientId = clientId;
+    });
+    
+    try {
+      final controller = ref.read(analyticsControllerProvider.notifier);
+      final analytics = await controller.getClientAnalytics(clientId, clientName);
+      setState(() {
+        _clientAnalytics = analytics;
+        _isLoadingAnalytics = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingAnalytics = false;
+      });
+    }
   }
 
   @override
@@ -105,33 +123,86 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
               // Client Selection Dropdown
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: GradientCard(
-                  gradient: AppGradients.card,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: DropdownButton<String>(
-                    value: _selectedClientId,
-                    isExpanded: true,
-                    underline: Container(),
-                    dropdownColor: AppColors.surface,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                    items: _mockClients.map((client) {
-                      return DropdownMenuItem<String>(
-                        value: client['id'],
-                        child: Text(client['name']!),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedClientId = value;
-                      });
-                    },
-                    icon: const Icon(
-                      Icons.arrow_drop_down_rounded,
-                      color: AppColors.primary,
-                    ),
-                  ),
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final clientsState = ref.watch(analyticsControllerProvider);
+                    
+                    return clientsState.when(
+                      data: (clients) {
+                        if (clients.isEmpty) {
+                          return GradientCard(
+                            gradient: AppGradients.card,
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'No clients found',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          );
+                        }
+                        
+                        // Auto-select first client if none selected
+                        if (_selectedClientId == null && clients.isNotEmpty) {
+                          final firstClient = clients.first;
+                          final clientId = firstClient['_id']?.toString() ?? firstClient['id']?.toString() ?? '';
+                          final clientName = firstClient['name']?.toString() ?? 
+                                           '${firstClient['firstName'] ?? ''} ${firstClient['lastName'] ?? ''}'.trim();
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _loadClientAnalytics(clientId, clientName);
+                          });
+                        }
+                        
+                        final clientMap = <String, String>{};
+                        for (final client in clients) {
+                          final id = client['_id']?.toString() ?? client['id']?.toString() ?? '';
+                          final name = client['name']?.toString() ?? 
+                                     '${client['firstName'] ?? ''} ${client['lastName'] ?? ''}'.trim();
+                          if (id.isNotEmpty && name.isNotEmpty) {
+                            clientMap[id] = name;
+                          }
+                        }
+                        
+                        return GradientCard(
+                          gradient: AppGradients.card,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: DropdownButton<String>(
+                            value: _selectedClientId,
+                            isExpanded: true,
+                            underline: Container(),
+                            dropdownColor: AppColors.surface,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                            items: clientMap.entries.map((entry) {
+                              return DropdownMenuItem<String>(
+                                value: entry.key,
+                                child: Text(entry.value),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null && clientMap.containsKey(value)) {
+                                _loadClientAnalytics(value, clientMap[value]!);
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.arrow_drop_down_rounded,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => const ShimmerCard(height: 60),
+                      error: (error, stack) => GradientCard(
+                        gradient: AppGradients.card,
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'Error loading clients: $error',
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               
@@ -154,68 +225,119 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
   }
 
   Widget _buildClientsTab(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: _mockClients.map((client) {
-        return GradientCard(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          gradient: AppGradients.card,
-          onTap: () {
-            setState(() {
-              _selectedClientId = client['id'];
-            });
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    client['name']![0].toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return Consumer(
+      builder: (context, ref, child) {
+        final clientsState = ref.watch(analyticsControllerProvider);
+        
+        return clientsState.when(
+          data: (clients) {
+            if (clients.isEmpty) {
+              return Center(
+                child: Text(
+                  'No clients available',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      client['name']!,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'View progress and statistics',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              if (_selectedClientId == client['id'])
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.success,
-                ),
-            ],
+              );
+            }
+            
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: clients.map((client) {
+                final clientId = client['_id']?.toString() ?? client['id']?.toString() ?? '';
+                final clientName = client['name']?.toString() ?? 
+                                 '${client['firstName'] ?? ''} ${client['lastName'] ?? ''}'.trim();
+                
+                if (clientId.isEmpty || clientName.isEmpty) return const SizedBox.shrink();
+                
+                return GradientCard(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  gradient: AppGradients.card,
+                  onTap: () {
+                    _loadClientAnalytics(clientId, clientName);
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            clientName[0].toUpperCase(),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              clientName,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'View progress and statistics',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_selectedClientId == clientId)
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.success,
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => ListView(
+            padding: const EdgeInsets.all(20),
+            children: List.generate(3, (index) => const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: ShimmerCard(height: 80),
+            )),
+          ),
+          error: (error, stack) => Center(
+            child: Text(
+              'Error loading clients: $error',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         );
-      }).toList(),
+      },
     );
   }
 
   Widget _buildOverviewTab(BuildContext context) {
+    if (_isLoadingAnalytics || _clientAnalytics == null) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const ShimmerCard(height: 250),
+          const SizedBox(height: 32),
+          const ShimmerCard(height: 100),
+        ],
+      );
+    }
+    
+    final analytics = _clientAnalytics!;
+    
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -224,7 +346,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        const AdherenceChart(),
+        AdherenceChart(
+          adherenceData: analytics.weeklyAdherence,
+          isLoading: _isLoadingAnalytics,
+        ),
         const SizedBox(height: 32),
         Text(
           'Quick Stats',
@@ -240,7 +365,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
                 child: Column(
                   children: [
                     Text(
-                      '85%',
+                      '${analytics.overallAdherence.toStringAsFixed(0)}%',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: AppColors.textPrimary,
                       ),
@@ -264,7 +389,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
                 child: Column(
                   children: [
                     Text(
-                      '12',
+                      '${analytics.totalWorkouts}',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: AppColors.textPrimary,
                       ),
@@ -287,6 +412,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
   }
 
   Widget _buildProgressTab(BuildContext context) {
+    if (_isLoadingAnalytics || _clientAnalytics == null) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const ShimmerCard(height: 300),
+        ],
+      );
+    }
+    
+    final analytics = _clientAnalytics!;
+    
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -295,7 +431,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> with SingleTicker
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        const StrengthProgressionChart(),
+        StrengthProgressionChart(
+          exerciseData: analytics.strengthProgression,
+          isLoading: _isLoadingAnalytics,
+        ),
       ],
     );
   }

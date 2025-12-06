@@ -9,7 +9,11 @@ import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
+import '../../presentation/widgets/glass_bottom_sheet.dart';
 import '../../core/utils/haptic_feedback.dart';
+import '../../services/workout_template_service.dart';
+import '../../services/exercise_library_service.dart';
+import '../../data/models/workout_template.dart';
 import 'package:uuid/uuid.dart';
 
 class WorkoutEditPage extends ConsumerStatefulWidget {
@@ -104,6 +108,173 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
         _exercises.add(result);
       });
       AppHaptic.medium();
+    }
+  }
+
+  Future<void> _selectTemplate() async {
+    AppHaptic.selection();
+    
+    // Only show template selection for new workouts
+    if (widget.workoutId != null) {
+      return;
+    }
+
+    final templates = await WorkoutTemplateService.instance.getAllTemplates();
+    
+    if (!mounted) return;
+
+    final selectedTemplate = await GlassBottomSheet.show<WorkoutTemplate>(
+      context: context,
+      title: 'Select Template',
+      height: MediaQuery.of(context).size.height * 0.7,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: templates.length,
+        itemBuilder: (context, index) {
+          final template = templates[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GradientCard(
+              padding: const EdgeInsets.all(16),
+              child: InkWell(
+                onTap: () {
+                  AppHaptic.medium();
+                  Navigator.of(context).pop(template);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      template.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      template.description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${template.exercises.length} exercises',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.primary,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    if (selectedTemplate != null) {
+      await _applyTemplate(selectedTemplate);
+    }
+  }
+
+  Future<void> _applyTemplate(WorkoutTemplate template) async {
+    AppHaptic.medium();
+    
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          'Apply Template?',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        content: Text(
+          'This will replace your current exercises with the "${template.name}" template exercises.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              AppHaptic.medium();
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Load exercise library
+    final exerciseLibrary = await ExerciseLibraryService.instance.loadExercises();
+    
+    // Convert template exercises to Exercise entities
+    final exercises = <Exercise>[];
+    for (final templateExercise in template.exercises) {
+      final exercise = exerciseLibrary.firstWhere(
+        (e) => e.id == templateExercise.exerciseId,
+        orElse: () => Exercise(
+          id: templateExercise.exerciseId,
+          name: templateExercise.name,
+          targetMuscle: '',
+          sets: List.generate(
+            templateExercise.defaultSets,
+            (index) => WorkoutSet(
+              id: const Uuid().v4(),
+              weight: templateExercise.defaultWeight ?? 0.0,
+              reps: templateExercise.defaultReps ?? 10,
+              rpe: null,
+              isCompleted: false,
+            ),
+          ),
+        ),
+      );
+      
+      // If exercise found, create sets from template
+      if (exerciseLibrary.any((e) => e.id == templateExercise.exerciseId)) {
+        exercises.add(Exercise(
+          id: exercise.id,
+          name: exercise.name,
+          targetMuscle: exercise.targetMuscle,
+          sets: List.generate(
+            templateExercise.defaultSets,
+            (index) => WorkoutSet(
+              id: const Uuid().v4(),
+              weight: templateExercise.defaultWeight ?? 0.0,
+              reps: templateExercise.defaultReps ?? 10,
+              rpe: null,
+              isCompleted: false,
+            ),
+          ),
+          category: exercise.category,
+          equipment: exercise.equipment,
+          instructions: exercise.instructions,
+        ));
+      }
+    }
+
+    setState(() {
+      _exercises = exercises;
+      if (_nameController.text.isEmpty) {
+        _nameController.text = template.name;
+      }
+    });
+
+    AppHaptic.heavy();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Template "${template.name}" applied successfully'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 
@@ -300,6 +471,30 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                
+                // Start from Template (only for new workouts)
+                if (widget.workoutId == null)
+                  Column(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _selectTemplate,
+                        icon: const Icon(Icons.auto_awesome_rounded),
+                        label: const Text('Start from Template'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 
                 // Exercises List
                 GradientCard(

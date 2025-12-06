@@ -1,5 +1,4 @@
 import '../../domain/entities/workout.dart';
-import '../../domain/entities/exercise.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../datasources/local_data_source.dart';
 import '../datasources/remote_data_source.dart';
@@ -10,17 +9,19 @@ import '../models/exercise_collection.dart' if (dart.library.html) '../models/ex
 
 class WorkoutRepositoryImpl implements WorkoutRepository {
   final LocalDataSource _localDataSource;
+  // RemoteDataSource reserved for future direct API calls
+  // ignore: unused_field
   final RemoteDataSource? _remoteDataSource;
   
   WorkoutRepositoryImpl(this._localDataSource, this._remoteDataSource);
   
   @override
   Future<List<Workout>> getWorkouts() async {
-    final collections = await _localDataSource.getWorkouts();
+    final List<WorkoutCollection> collections = await _localDataSource.getWorkouts();
     final workouts = <Workout>[];
     
-    for (final collection in collections) {
-      final exercises = await _localDataSource.getExercisesForWorkout(collection.id as int);
+    for (final WorkoutCollection collection in collections) {
+      final List<ExerciseCollection> exercises = await _localDataSource.getExercisesForWorkout(collection.id);
       final exerciseEntities = exercises.map((e) => ExerciseMapper.toEntity(e)).toList();
       workouts.add(WorkoutMapper.toEntity(collection, exerciseEntities));
     }
@@ -33,10 +34,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     final isarId = int.tryParse(id);
     if (isarId == null) return null;
     
-    final collection = await _localDataSource.getWorkoutById(isarId);
+    final WorkoutCollection? collection = await _localDataSource.getWorkoutById(isarId);
     if (collection == null) return null;
     
-    final exercises = await _localDataSource.getExercisesForWorkout(collection.id as int);
+    final List<ExerciseCollection> exercises = await _localDataSource.getExercisesForWorkout(collection.id);
     final exerciseEntities = exercises.map((e) => ExerciseMapper.toEntity(e)).toList();
     return WorkoutMapper.toEntity(collection, exerciseEntities);
   }
@@ -81,11 +82,12 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     final isarId = int.tryParse(workoutId);
     if (isarId == null) throw Exception('Invalid workout ID');
     
-    final workout = await _localDataSource.getWorkoutById(isarId);
+    final WorkoutCollection? workout = await _localDataSource.getWorkoutById(isarId);
     if (workout == null) throw Exception('Workout not found');
     
-    final exercises = await _localDataSource.getExercisesForWorkout(workout.id);
-    final exercise = exercises.firstWhere((e) => e.id.toString() == exerciseId);
+    final List<ExerciseCollection> exercises = await _localDataSource.getExercisesForWorkout(workout.id);
+    // Verify exercise exists - implementation for adding set will be added later
+    exercises.firstWhere((e) => e.id.toString() == exerciseId, orElse: () => throw Exception('Exercise not found'));
     
     // Add new set
     // Implementation for adding set

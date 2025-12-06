@@ -36,8 +36,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           child: workoutsState.when(
             data: (workouts) => Column(
               children: [
-                // Calendar
-                _buildCalendar(context, workouts),
+                // Calendar - use Flexible with better flex ratio
+                Flexible(
+                  flex: _calendarFormat == CalendarFormat.month ? 2 : 1,
+                  child: _buildCalendar(context, workouts),
+                ),
                 
                 // Selected Day Workouts
                 Expanded(
@@ -82,12 +85,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       workoutsByDate.putIfAbsent(date, () => []).add(workout);
     }
 
+    // Calculate max height based on screen size and calendar format
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxCalendarHeight = _calendarFormat == CalendarFormat.month 
+        ? screenHeight * 0.45  // 45% of screen for month view
+        : screenHeight * 0.25; // 25% of screen for week view
+
     return Container(
       margin: const EdgeInsets.all(20),
-      child: GradientCard(
-        gradient: AppGradients.card,
-        padding: const EdgeInsets.all(16),
-        child: TableCalendar(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: maxCalendarHeight,
+        ),
+        child: GradientCard(
+          gradient: AppGradients.card,
+          padding: const EdgeInsets.all(16),
+          child: TableCalendar(
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
@@ -164,6 +177,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           },
         ),
       ),
+      ),
     );
   }
 
@@ -195,13 +209,60 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           const SizedBox(height: 16),
           if (dayWorkouts.isEmpty)
             Expanded(
-              child: EmptyState(
-                icon: Icons.fitness_center_rounded,
-                title: 'No workouts scheduled',
-                message: 'Tap + to schedule a workout for this day',
-                actionLabel: 'Schedule Workout',
-                onAction: () {
-                  // TODO: Show add workout dialog
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Adjust padding based on available height
+                  final padding = constraints.maxHeight < 200 
+                      ? 16.0 
+                      : constraints.maxHeight < 300 
+                          ? 24.0 
+                          : 32.0;
+                  
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(padding),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(padding),
+                            decoration: BoxDecoration(
+                              gradient: AppGradients.card,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.fitness_center_rounded,
+                              size: constraints.maxHeight < 200 ? 48 : 64,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          SizedBox(height: padding),
+                          Text(
+                            'No workouts scheduled',
+                            style: Theme.of(context).textTheme.headlineSmall,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap + to schedule a workout for this day',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: padding),
+                          NeonButton(
+                            text: 'Schedule Workout',
+                            onPressed: () {
+                              // TODO: Show add workout dialog
+                            },
+                            gradient: AppGradients.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 },
               ),
             )

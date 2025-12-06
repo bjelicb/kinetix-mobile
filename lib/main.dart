@@ -19,7 +19,8 @@ class KinetixApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
-    final bootstrap = ref.watch(bootstrapControllerProvider);
+    // Bootstrap is watched to ensure initialization
+    ref.watch(bootstrapControllerProvider);
     
     return MaterialApp.router(
       title: 'Kinetix',

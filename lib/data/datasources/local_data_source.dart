@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Conditional imports - only import Isar on non-web platforms
-import 'package:isar/isar.dart' if (dart.library.html) '../../isar_stub.dart';
+// Isar is used via dynamic calls, no direct import needed
 import '../models/user_collection.dart' if (dart.library.html) '../models/user_collection_stub.dart';
 import '../models/workout_collection.dart' if (dart.library.html) '../models/workout_collection_stub.dart';
 import '../models/exercise_collection.dart' if (dart.library.html) '../models/exercise_collection_stub.dart';
@@ -22,6 +22,14 @@ class LocalDataSource {
     // Use dynamic to avoid type errors on web
     final isarInstance = isar;
     return await (isarInstance as dynamic).userCollections.filter().serverIdEqualTo(serverId).findFirst();
+  }
+  
+  Future<List<UserCollection>> getUsers() async {
+    if (kIsWeb) return [];
+    final isar = await _isar;
+    if (isar == null) return [];
+    final isarInstance = isar;
+    return await (isarInstance as dynamic).userCollections.where().findAll();
   }
   
   Future<void> saveUser(UserCollection user) async {
@@ -154,6 +162,63 @@ class LocalDataSource {
     if (isar == null) return [];
     final isarInstance = isar;
     return await (isarInstance as dynamic).checkInCollections.filter().photoUrlIsNull().findAll();
+  }
+  
+  /// Get today's check-in if it exists
+  Future<CheckInCollection?> getTodayCheckIn() async {
+    if (kIsWeb) return null;
+    final isar = await _isar;
+    if (isar == null) return null;
+    
+    final now = DateTime.now();
+    
+    final isarInstance = isar;
+    final allCheckIns = await (isarInstance as dynamic).checkInCollections.where().findAll();
+    
+    // Find check-in for today
+    for (final checkIn in allCheckIns) {
+      final checkInDate = DateTime(
+        checkIn.timestamp.year,
+        checkIn.timestamp.month,
+        checkIn.timestamp.day,
+      );
+      final todayDate = DateTime(now.year, now.month, now.day);
+      
+      if (checkInDate == todayDate) {
+        return checkIn;
+      }
+    }
+    
+    return null;
+  }
+  
+  /// Get workouts scheduled for today
+  Future<List<WorkoutCollection>> getTodayWorkouts() async {
+    if (kIsWeb) return [];
+    final isar = await _isar;
+    if (isar == null) return [];
+    
+    final now = DateTime.now();
+    
+    final isarInstance = isar;
+    final allWorkouts = await (isarInstance as dynamic).workoutCollections.where().findAll();
+    
+    // Filter workouts for today
+    final todayWorkouts = <WorkoutCollection>[];
+    for (final workout in allWorkouts) {
+      final workoutDate = DateTime(
+        workout.scheduledDate.year,
+        workout.scheduledDate.month,
+        workout.scheduledDate.day,
+      );
+      final todayDate = DateTime(now.year, now.month, now.day);
+      
+      if (workoutDate == todayDate) {
+        todayWorkouts.add(workout);
+      }
+    }
+    
+    return todayWorkouts;
   }
   
   Future<void> saveCheckIn(CheckInCollection checkIn) async {

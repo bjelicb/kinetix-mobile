@@ -5,10 +5,14 @@ import '../../core/theme/gradients.dart';
 import 'gradient_card.dart';
 
 class AdherenceChart extends StatelessWidget {
-  const AdherenceChart({super.key});
-
-  // Mock data for weekly adherence (Mon-Sun)
-  static const List<double> _adherenceData = [85, 90, 75, 100, 80, 95, 70];
+  final List<double> adherenceData;
+  final bool isLoading;
+  
+  const AdherenceChart({
+    super.key,
+    required this.adherenceData,
+    this.isLoading = false,
+  });
 
   Color _getBarColor(double percentage) {
     if (percentage >= 80) {
@@ -22,6 +26,35 @@ class AdherenceChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return GradientCard(
+        gradient: AppGradients.card,
+        padding: const EdgeInsets.all(20),
+        child: const SizedBox(
+          height: 250,
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+    
+    if (adherenceData.isEmpty || adherenceData.length != 7) {
+      return GradientCard(
+        gradient: AppGradients.card,
+        padding: const EdgeInsets.all(20),
+        child: SizedBox(
+          height: 250,
+          child: Center(
+            child: Text(
+              'No data available',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      );
+    }
+    
     return GradientCard(
       gradient: AppGradients.card,
       padding: const EdgeInsets.all(20),
@@ -35,7 +68,7 @@ class AdherenceChart extends StatelessWidget {
               enabled: true,
               touchTooltipData: BarTouchTooltipData(
                 getTooltipColor: (group) => AppColors.surface,
-                tooltipRoundedRadius: 8,
+                tooltipBorderRadius: BorderRadius.circular(8),
                 tooltipPadding: const EdgeInsets.all(8),
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
                   return BarTooltipItem(
@@ -99,7 +132,7 @@ class AdherenceChart extends StatelessWidget {
                 width: 1,
               ),
             ),
-            barGroups: _adherenceData.asMap().entries.map((entry) {
+            barGroups: adherenceData.asMap().entries.map((entry) {
               final index = entry.key;
               final percentage = entry.value;
               return BarChartGroupData(

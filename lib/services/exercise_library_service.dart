@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import '../domain/entities/exercise.dart';
 import 'package:uuid/uuid.dart';
@@ -50,7 +51,7 @@ class ExerciseLibraryService {
 
       return _cachedExercises!;
     } catch (e) {
-      print('Error loading exercises: $e');
+      debugPrint('Error loading exercises: $e');
       return [];
     } finally {
       _isLoading = false;

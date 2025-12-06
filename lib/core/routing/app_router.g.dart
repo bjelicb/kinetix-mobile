@@ -6,7 +6,7 @@ part of 'app_router.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appRouterHash() => r'2340853973deee516ba1e4c7d41ec620e9d34492';
+String _$appRouterHash() => r'b6e41788e9ccbea1910d32059dec7631309e799d';
 
 /// See also [appRouter].
 @ProviderFor(appRouter)
@@ -21,4 +21,4 @@ final appRouterProvider = AutoDisposeProvider<GoRouter>.internal(
 
 typedef AppRouterRef = AutoDisposeProviderRef<GoRouter>;
 // ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use

@@ -70,13 +70,20 @@ class _CheckInHistoryPageState extends ConsumerState<CheckInHistoryPage> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          automaticallyImplyLeading: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textPrimary),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
+          ),
           title: Text(
             'Check-In History',
             style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textPrimary),
-            onPressed: () => context.pop(),
           ),
         ),
         body: SafeArea(

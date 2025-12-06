@@ -12,16 +12,68 @@ import '../../presentation/widgets/empty_state.dart';
 import '../../presentation/widgets/nutrition_summary_card.dart';
 import '../../presentation/widgets/client_alerts_card.dart';
 import '../../presentation/widgets/appointments_card.dart';
+import '../../presentation/widgets/search_bar.dart' as kinetix_search;
+import '../../presentation/widgets/filter_bottom_sheet.dart';
 import '../../core/utils/haptic_feedback.dart';
+import '../../services/exercise_library_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  String? _searchQuery;
+  FilterOptions _filterOptions = FilterOptions();
+  List<String> _availableMuscleGroups = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMuscleGroups();
+  }
+
+  Future<void> _loadMuscleGroups() async {
+    try {
+      final exercises = await ExerciseLibraryService.instance.getAllExercises();
+      final muscleGroups = exercises.map((e) => e.targetMuscle).toSet().toList();
+      setState(() {
+        _availableMuscleGroups = muscleGroups;
+      });
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  Future<void> _showFilterSheet() async {
+    AppHaptic.selection();
+    final result = await FilterBottomSheet.show(
+      context: context,
+      initialFilters: _filterOptions,
+      availableMuscleGroups: _availableMuscleGroups,
+      availableExercises: [], // Can be populated if needed
+    );
+
+    if (result != null) {
+      setState(() {
+        _filterOptions = result;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final workoutsState = ref.watch(workoutControllerProvider);
     final authState = ref.watch(authControllerProvider);
+    
+    // Get filtered workouts
+    final filteredWorkouts = ref.read(workoutControllerProvider.notifier).filterWorkouts(
+      _searchQuery,
+      _filterOptions.hasActiveFilters ? _filterOptions : null,
+    );
     
     return GradientBackground(
       child: Scaffold(
@@ -43,6 +95,23 @@ class DashboardPage extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: _buildHeader(context, user, ref),
                     ),
+                    
+                    // Search Bar
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: kinetix_search.SearchBar(
+                          hintText: 'Search workouts...',
+                          onChanged: (query) {
+                            setState(() {
+                              _searchQuery = query.isEmpty ? null : query;
+                            });
+                          },
+                          onFilterTap: _showFilterSheet,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
                     
                     // Quick Stats (Client only)
                     if (!isTrainer)
@@ -66,7 +135,7 @@ class DashboardPage extends ConsumerWidget {
                     
                     // Today's Mission Card
                     SliverToBoxAdapter(
-                      child: _buildTodaysMission(context, workouts, ref),
+                      child: _buildTodaysMission(context, filteredWorkouts, ref),
                     ),
                     
                     // Role-dependent content
@@ -76,7 +145,7 @@ class DashboardPage extends ConsumerWidget {
                       )
                     else
                       SliverToBoxAdapter(
-                        child: _buildClientContent(context, workouts, ref),
+                        child: _buildClientContent(context, filteredWorkouts, ref),
                       ),
                     
                     // Spacing

@@ -1,5 +1,4 @@
 import '../entities/workout.dart';
-import '../entities/exercise.dart';
 
 abstract class WorkoutRepository {
   Future<List<Workout>> getWorkouts();

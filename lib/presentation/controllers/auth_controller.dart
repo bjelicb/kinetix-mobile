@@ -3,7 +3,9 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/datasources/local_data_source.dart';
+import '../../data/datasources/remote_data_source.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 
 part 'auth_controller.g.dart';
 
@@ -15,8 +17,10 @@ class AuthController extends _$AuthController {
   FutureOr<User?> build() async {
     final storage = FlutterSecureStorage();
     final localDataSource = LocalDataSource();
-    // Use mock - backend not ready
-    _repository = AuthRepositoryImpl(localDataSource, storage);
+    final dio = Dio();
+    final remoteDataSource = RemoteDataSource(dio, storage);
+    // Use real backend
+    _repository = AuthRepositoryImpl(localDataSource, remoteDataSource, storage);
     
     return await _repository.getCurrentUser();
   }

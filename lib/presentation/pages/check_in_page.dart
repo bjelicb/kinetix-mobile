@@ -1,7 +1,6 @@
-import 'dart:io' if (dart.library.html) 'dart:html' as html;
 import 'dart:io' as io show Directory, File;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:go_router/go_router.dart';
@@ -16,9 +15,13 @@ import '../../core/utils/haptic_feedback.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
 import '../../core/utils/image_cache_manager.dart';
 import '../../data/datasources/local_data_source.dart';
+import '../../data/datasources/remote_data_source.dart';
 import '../../data/models/checkin_collection.dart' if (dart.library.html) '../../data/models/checkin_collection_stub.dart';
+import '../../services/cloudinary_upload_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class CheckInPage extends StatefulWidget {
   const CheckInPage({super.key});
@@ -58,7 +61,7 @@ class _CheckInPageState extends State<CheckInPage> {
         });
       }
     } catch (e) {
-      print('Error initializing camera: $e');
+      debugPrint('Error initializing camera: $e');
     }
   }
 
@@ -92,7 +95,7 @@ class _CheckInPageState extends State<CheckInPage> {
         _flashOn = !_flashOn;
       });
     } catch (e) {
-      print('Error toggling flash: $e');
+      debugPrint('Error toggling flash: $e');
     }
   }
 
@@ -108,7 +111,7 @@ class _CheckInPageState extends State<CheckInPage> {
         _capturedImage = image;
       });
     } catch (e) {
-      print('Error capturing photo: $e');
+      debugPrint('Error capturing photo: $e');
     }
   }
 
@@ -118,11 +121,13 @@ class _CheckInPageState extends State<CheckInPage> {
     try {
       AppHaptic.heavy();
       
-      // Save to local storage (skip on web)
-      String savedPath = _capturedImage!.path;
+      // Read and compress image
+      Uint8List imageBytes;
+      String? savedPath;
+      
       if (!kIsWeb) {
-        // Read and compress image
-        final imageBytes = await io.File(_capturedImage!.path).readAsBytes();
+        // Read image from file
+        imageBytes = await io.File(_capturedImage!.path).readAsBytes();
         final originalImage = img.decodeImage(imageBytes);
         
         if (originalImage != null) {
@@ -135,11 +140,11 @@ class _CheckInPageState extends State<CheckInPage> {
           );
           
           // Compress to JPEG with 85% quality
-          final compressedBytes = Uint8List.fromList(
+          imageBytes = Uint8List.fromList(
             img.encodeJpg(resizedImage, quality: 85),
           );
           
-          // Save compressed image
+          // Save compressed image locally
           final appDir = await getApplicationDocumentsDirectory();
           final checkinsDir = io.Directory(path.join(appDir.path, 'checkins'));
           if (!await checkinsDir.exists()) {
@@ -150,19 +155,47 @@ class _CheckInPageState extends State<CheckInPage> {
           final fileName = 'checkin_$timestamp.jpg';
           savedPath = path.join(checkinsDir.path, fileName);
           final savedFile = io.File(savedPath);
-          await savedFile.writeAsBytes(compressedBytes);
+          await savedFile.writeAsBytes(imageBytes);
           
           // Cache the image
-          await ImageCacheManager.instance.cacheImage(savedPath, compressedBytes);
+          await ImageCacheManager.instance.cacheImage(savedPath, imageBytes);
         }
+      } else {
+        // Web: read from XFile
+        imageBytes = await _capturedImage!.readAsBytes();
+      }
+
+      // Upload to Cloudinary and create check-in
+      String? photoUrl;
+      try {
+        final storage = FlutterSecureStorage();
+        final dio = Dio();
+        final remoteDataSource = RemoteDataSource(dio, storage);
+        final cloudinaryService = CloudinaryUploadService(remoteDataSource);
+        
+        // Upload to Cloudinary
+        photoUrl = await cloudinaryService.uploadCheckInPhoto(imageBytes);
+        
+        // Create check-in via API
+        final checkInData = {
+          'checkinDate': DateTime.now().toIso8601String(),
+          'photoUrl': photoUrl,
+          'gpsCoordinates': null, // TODO: Add GPS coordinates if available
+        };
+        
+        await remoteDataSource.createCheckIn(checkInData);
+      } catch (uploadError) {
+        // If upload fails, still save locally for later sync
+        debugPrint('Cloudinary upload failed, saving locally for sync: $uploadError');
       }
 
       // Save to Isar database (skip on web)
-      if (!kIsWeb) {
+      if (!kIsWeb && savedPath != null) {
         final checkIn = CheckInCollection()
           ..photoLocalPath = savedPath
+          ..photoUrl = photoUrl
           ..timestamp = DateTime.now()
-          ..isSynced = false;
+          ..isSynced = photoUrl != null; // Mark as synced if upload succeeded
         
         final localDataSource = LocalDataSource();
         await localDataSource.saveCheckIn(checkIn);
@@ -177,7 +210,7 @@ class _CheckInPageState extends State<CheckInPage> {
         context.go('/home');
       }
     } catch (e) {
-      print('Error saving check-in: $e');
+      debugPrint('Error saving check-in: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -6,7 +6,6 @@ import '../../core/theme/gradients.dart';
 import '../../domain/entities/exercise.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
-import '../../presentation/widgets/neon_button.dart';
 import '../../presentation/widgets/exercise_details_modal.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../services/exercise_library_service.dart';
@@ -63,7 +62,7 @@ class _ExerciseSelectionPageState extends State<ExerciseSelectionPage> {
       _availableEquipment = await _exerciseService.getAllEquipment();
       _filteredExercises = List.from(_allExercises);
     } catch (e) {
-      print('Error loading exercises: $e');
+      debugPrint('Error loading exercises: $e');
     } finally {
       setState(() {
         _isLoading = false;

@@ -7,8 +7,11 @@ import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
+import '../../presentation/widgets/progress_chart.dart';
+import '../../presentation/widgets/pr_tracker.dart';
 import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/controllers/checkin_controller.dart';
+import '../../domain/entities/workout.dart';
 import '../../core/utils/haptic_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -165,7 +168,6 @@ class ProfilePage extends ConsumerWidget {
     
     return workoutsState.when(
       data: (workouts) {
-        final totalWorkouts = workouts.length;
         final completedWorkouts = workouts.where((w) => w.isCompleted).length;
         
         // Calculate total volume
@@ -216,19 +218,148 @@ class ProfilePage extends ConsumerWidget {
           }
         });
         
-        return Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildStatCard(context, '$completedWorkouts', 'Completed\nWorkouts', AppGradients.primary),
-              const SizedBox(width: 12),
-              _buildStatCard(context, '$streak', 'Day\nStreak', AppGradients.secondary),
-              const SizedBox(width: 12),
-              _buildStatCard(context, '${(totalVolume / 1000).toStringAsFixed(1)}k', 'Total\nVolume (kg)', AppGradients.success),
-            ],
-          ),
+        // Calculate volume progression (last 7 workouts)
+        final sortedWorkouts = List.from(workouts)
+          ..sort((a, b) => b.scheduledDate.compareTo(a.scheduledDate));
+        final recentWorkouts = sortedWorkouts.take(7).toList().reversed.toList();
+        
+        final volumeDataPoints = recentWorkouts.asMap().entries.map((entry) {
+          final index = entry.key;
+          final workout = entry.value;
+          double volume = 0;
+          for (final exercise in workout.exercises) {
+            for (final set in exercise.sets) {
+              if (set.isCompleted) {
+                volume += set.weight * set.reps;
+              }
+            }
+          }
+          return ChartDataPoint(index.toDouble(), volume);
+        }).toList();
+
+        // Calculate personal records
+        final prs = _calculatePersonalRecords(workouts);
+
+        // Get best exercises (most frequently used)
+        final exerciseCounts = <String, int>{};
+        for (final workout in workouts) {
+          for (final exercise in workout.exercises) {
+            exerciseCounts[exercise.name] = (exerciseCounts[exercise.name] ?? 0) + 1;
+          }
+        }
+        final bestExercises = exerciseCounts.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value))
+          ..take(3);
+
+        return Column(
+          children: [
+            // Quick Stats
+            Container(
+              height: 120,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _buildStatCard(context, '$completedWorkouts', 'Completed\nWorkouts', AppGradients.primary),
+                  const SizedBox(width: 12),
+                  _buildStatCard(context, '$streak', 'Day\nStreak', AppGradients.secondary),
+                  const SizedBox(width: 12),
+                  _buildStatCard(context, '${(totalVolume / 1000).toStringAsFixed(1)}k', 'Total\nVolume (kg)', AppGradients.success),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Volume Progression Chart
+            if (volumeDataPoints.length > 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ProgressChart(
+                  dataPoints: volumeDataPoints,
+                  title: 'Volume Progression (Last 7 Workouts)',
+                  yAxisLabel: 'Volume (kg)',
+                ),
+              ),
+            const SizedBox(height: 20),
+            
+            // Personal Records
+            if (prs.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: PRTracker(personalRecords: prs),
+              ),
+            const SizedBox(height: 20),
+            
+            // Best Exercises
+            if (bestExercises.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: GradientCard(
+                  gradient: AppGradients.card,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Best Exercises',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      ...bestExercises.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                entry.key,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  '${entry.value}x',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 20),
+            
+            // View Full History Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  AppHaptic.selection();
+                  context.push('/workout-history');
+                },
+                icon: const Icon(Icons.history_rounded),
+                label: const Text('View Full Workout History'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
       loading: () => Container(
@@ -244,7 +375,7 @@ class ProfilePage extends ConsumerWidget {
           ],
         ),
       ),
-      error: (_, __) => Container(
+      error: (error, stackTrace) => Container(
         height: 120,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: const Center(
@@ -252,6 +383,36 @@ class ProfilePage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  List<PersonalRecord> _calculatePersonalRecords(List<Workout> workouts) {
+    final prs = <String, PersonalRecord>{};
+    
+    for (final workout in workouts) {
+      if (!workout.isCompleted) continue;
+      
+      for (final exercise in workout.exercises) {
+        for (final set in exercise.sets) {
+          if (!set.isCompleted) continue;
+          
+          final key = '${exercise.id}_${set.reps}';
+          final existingPR = prs[key];
+          
+          if (existingPR == null || set.weight > existingPR.weight) {
+            prs[key] = PersonalRecord(
+              exerciseId: exercise.id,
+              exerciseName: exercise.name,
+              weight: set.weight,
+              reps: set.reps,
+              date: workout.scheduledDate,
+            );
+          }
+        }
+      }
+    }
+    
+    return prs.values.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
   }
 
   Widget _buildStatCard(BuildContext context, String value, String label, Gradient gradient) {
@@ -383,32 +544,13 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ],
                 const Divider(height: 1),
-                _buildSettingTileWithToggle(
+                _buildSettingTile(
                   context,
-                  'Notifications',
-                  Icons.notifications_rounded,
-                  true, // Mock value
-                  (value) {
+                  'Settings',
+                  Icons.settings_rounded,
+                  () {
                     AppHaptic.selection();
-                    // TODO: Save notification preference
-                  },
-                ),
-                const Divider(height: 1),
-                _buildSettingTile(
-                  context,
-                  'Theme',
-                  Icons.palette_rounded,
-                  () {
-                    // TODO: Open theme settings
-                  },
-                ),
-                const Divider(height: 1),
-                _buildSettingTile(
-                  context,
-                  'Data & Sync',
-                  Icons.sync_rounded,
-                  () {
-                    // TODO: Open sync settings
+                    context.push('/settings');
                   },
                 ),
                 const Divider(height: 1),
@@ -456,33 +598,7 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingTileWithToggle(
-    BuildContext context,
-    String title,
-    IconData icon,
-    bool value,
-    Function(bool) onChanged,
-  ) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          gradient: AppGradients.primary,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: AppColors.textPrimary, size: 20),
-      ),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppColors.primary,
-      ),
-    );
-  }
+  // Removed _buildSettingTileWithToggle - not used anymore (settings moved to SettingsPage)
 
   Future<void> _showAboutDialog(BuildContext context) async {
     AppHaptic.selection();

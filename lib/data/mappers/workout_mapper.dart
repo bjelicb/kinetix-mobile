@@ -1,7 +1,6 @@
 import '../../domain/entities/workout.dart';
 import '../../domain/entities/exercise.dart' as domain;
 import '../models/workout_collection.dart' if (dart.library.html) '../models/workout_collection_stub.dart';
-import 'exercise_mapper.dart';
 
 class WorkoutMapper {
   static Workout toEntity(WorkoutCollection collection, List<domain.Exercise> exercises) {

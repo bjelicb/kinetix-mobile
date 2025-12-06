@@ -1,0 +1,551 @@
+{
+  "templates": [
+    {
+      "id": "push-pull-legs",
+      "name": "Push/Pull/Legs",
+      "description": "Classic 3-day split focusing on pushing, pulling, and leg movements",
+      "exercises": [
+        {
+          "exerciseId": "bench-press",
+          "name": "Bench Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "overhead-press",
+          "name": "Overhead Press",
+          "defaultSets": 3,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "incline-bench-press",
+          "name": "Incline Bench Press",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "tricep-dip",
+          "name": "Tricep Dip",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "lateral-raise",
+          "name": "Lateral Raise",
+          "defaultSets": 3,
+          "defaultReps": 12
+        }
+      ]
+    },
+    {
+      "id": "full-body",
+      "name": "Full Body",
+      "description": "Complete full-body workout hitting all major muscle groups",
+      "exercises": [
+        {
+          "exerciseId": "squat",
+          "name": "Squat",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "bench-press",
+          "name": "Bench Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "barbell-row",
+          "name": "Barbell Row",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "overhead-press",
+          "name": "Overhead Press",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "deadlift",
+          "name": "Deadlift",
+          "defaultSets": 3,
+          "defaultReps": 5
+        },
+        {
+          "exerciseId": "plank",
+          "name": "Plank",
+          "defaultSets": 3,
+          "defaultReps": 60
+        }
+      ]
+    },
+    {
+      "id": "upper-lower",
+      "name": "Upper/Lower",
+      "description": "4-day split alternating between upper and lower body",
+      "exercises": [
+        {
+          "exerciseId": "bench-press",
+          "name": "Bench Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "barbell-row",
+          "name": "Barbell Row",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "overhead-press",
+          "name": "Overhead Press",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "pull-ups",
+          "name": "Pull-ups",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "bicep-curl",
+          "name": "Bicep Curl",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "tricep-pushdown",
+          "name": "Tricep Pushdown",
+          "defaultSets": 3,
+          "defaultReps": 12
+        }
+      ]
+    },
+    {
+      "id": "chest-back",
+      "name": "Chest & Back",
+      "description": "Focus on chest and back muscles for upper body strength",
+      "exercises": [
+        {
+          "exerciseId": "bench-press",
+          "name": "Bench Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "barbell-row",
+          "name": "Barbell Row",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "incline-bench-press",
+          "name": "Incline Bench Press",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "pull-ups",
+          "name": "Pull-ups",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "dumbbell-flyes",
+          "name": "Dumbbell Flyes",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "t-bar-row",
+          "name": "T-Bar Row",
+          "defaultSets": 3,
+          "defaultReps": 10
+        }
+      ]
+    },
+    {
+      "id": "arms-shoulders",
+      "name": "Arms & Shoulders",
+      "description": "Isolated arm and shoulder workout for size and definition",
+      "exercises": [
+        {
+          "exerciseId": "overhead-press",
+          "name": "Overhead Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "bicep-curl",
+          "name": "Bicep Curl",
+          "defaultSets": 4,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "tricep-dip",
+          "name": "Tricep Dip",
+          "defaultSets": 4,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "lateral-raise",
+          "name": "Lateral Raise",
+          "defaultSets": 3,
+          "defaultReps": 15
+        },
+        {
+          "exerciseId": "hammer-curl",
+          "name": "Hammer Curl",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "tricep-pushdown",
+          "name": "Tricep Pushdown",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "rear-delt-fly",
+          "name": "Rear Delt Fly",
+          "defaultSets": 3,
+          "defaultReps": 15
+        }
+      ]
+    },
+    {
+      "id": "push-day",
+      "name": "Push Day",
+      "description": "Chest, shoulders, and triceps focused workout",
+      "exercises": [
+        {
+          "exerciseId": "bench-press",
+          "name": "Bench Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "overhead-press",
+          "name": "Overhead Press",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "incline-bench-press",
+          "name": "Incline Bench Press",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "tricep-dip",
+          "name": "Tricep Dip",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "lateral-raise",
+          "name": "Lateral Raise",
+          "defaultSets": 3,
+          "defaultReps": 15
+        },
+        {
+          "exerciseId": "close-grip-bench-press",
+          "name": "Close Grip Bench Press",
+          "defaultSets": 3,
+          "defaultReps": 10
+        }
+      ]
+    },
+    {
+      "id": "pull-day",
+      "name": "Pull Day",
+      "description": "Back and biceps focused workout",
+      "exercises": [
+        {
+          "exerciseId": "deadlift",
+          "name": "Deadlift",
+          "defaultSets": 4,
+          "defaultReps": 5
+        },
+        {
+          "exerciseId": "pull-ups",
+          "name": "Pull-ups",
+          "defaultSets": 4,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "barbell-row",
+          "name": "Barbell Row",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "bicep-curl",
+          "name": "Bicep Curl",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "lat-pulldown",
+          "name": "Lat Pulldown",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "hammer-curl",
+          "name": "Hammer Curl",
+          "defaultSets": 3,
+          "defaultReps": 12
+        }
+      ]
+    },
+    {
+      "id": "leg-day",
+      "name": "Leg Day",
+      "description": "Complete lower body workout targeting quads, hamstrings, and glutes",
+      "exercises": [
+        {
+          "exerciseId": "squat",
+          "name": "Squat",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "romanian-deadlift",
+          "name": "Romanian Deadlift",
+          "defaultSets": 4,
+          "defaultReps": 8
+        },
+        {
+          "exerciseId": "leg-press",
+          "name": "Leg Press",
+          "defaultSets": 4,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "leg-curl",
+          "name": "Leg Curl",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "lunges",
+          "name": "Lunges",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "calf-raise",
+          "name": "Calf Raise",
+          "defaultSets": 4,
+          "defaultReps": 15
+        }
+      ]
+    },
+    {
+      "id": "core-focus",
+      "name": "Core Focus",
+      "description": "Intense core and ab workout for strength and stability",
+      "exercises": [
+        {
+          "exerciseId": "plank",
+          "name": "Plank",
+          "defaultSets": 3,
+          "defaultReps": 60
+        },
+        {
+          "exerciseId": "crunches",
+          "name": "Crunches",
+          "defaultSets": 3,
+          "defaultReps": 20
+        },
+        {
+          "exerciseId": "russian-twist",
+          "name": "Russian Twist",
+          "defaultSets": 3,
+          "defaultReps": 20
+        },
+        {
+          "exerciseId": "leg-raise",
+          "name": "Leg Raise",
+          "defaultSets": 3,
+          "defaultReps": 15
+        },
+        {
+          "exerciseId": "mountain-climbers",
+          "name": "Mountain Climbers",
+          "defaultSets": 3,
+          "defaultReps": 30
+        },
+        {
+          "exerciseId": "ab-wheel-rollout",
+          "name": "Ab Wheel Rollout",
+          "defaultSets": 3,
+          "defaultReps": 12
+        }
+      ]
+    },
+    {
+      "id": "cardio-strength",
+      "name": "Cardio + Strength",
+      "description": "Hybrid workout combining strength training with cardio elements",
+      "exercises": [
+        {
+          "exerciseId": "squat",
+          "name": "Squat",
+          "defaultSets": 3,
+          "defaultReps": 15
+        },
+        {
+          "exerciseId": "push-ups",
+          "name": "Push-ups",
+          "defaultSets": 3,
+          "defaultReps": 20
+        },
+        {
+          "exerciseId": "lunges",
+          "name": "Lunges",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "mountain-climbers",
+          "name": "Mountain Climbers",
+          "defaultSets": 3,
+          "defaultReps": 30
+        },
+        {
+          "exerciseId": "burpees",
+          "name": "Burpees",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "plank",
+          "name": "Plank",
+          "defaultSets": 3,
+          "defaultReps": 60
+        }
+      ]
+    },
+    {
+      "id": "beginner-full-body",
+      "name": "Beginner Full Body",
+      "description": "Perfect starter workout for beginners with bodyweight and basic exercises",
+      "exercises": [
+        {
+          "exerciseId": "push-ups",
+          "name": "Push-ups",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "squat",
+          "name": "Squat",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "plank",
+          "name": "Plank",
+          "defaultSets": 3,
+          "defaultReps": 30
+        },
+        {
+          "exerciseId": "lunges",
+          "name": "Lunges",
+          "defaultSets": 2,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "crunches",
+          "name": "Crunches",
+          "defaultSets": 2,
+          "defaultReps": 15
+        }
+      ]
+    },
+    {
+      "id": "powerlifting",
+      "name": "Powerlifting",
+      "description": "Focus on the big three: squat, bench press, and deadlift",
+      "exercises": [
+        {
+          "exerciseId": "squat",
+          "name": "Squat",
+          "defaultSets": 5,
+          "defaultReps": 5
+        },
+        {
+          "exerciseId": "bench-press",
+          "name": "Bench Press",
+          "defaultSets": 5,
+          "defaultReps": 5
+        },
+        {
+          "exerciseId": "deadlift",
+          "name": "Deadlift",
+          "defaultSets": 5,
+          "defaultReps": 5
+        },
+        {
+          "exerciseId": "overhead-press",
+          "name": "Overhead Press",
+          "defaultSets": 3,
+          "defaultReps": 5
+        },
+        {
+          "exerciseId": "barbell-row",
+          "name": "Barbell Row",
+          "defaultSets": 3,
+          "defaultReps": 8
+        }
+      ]
+    },
+    {
+      "id": "bodyweight",
+      "name": "Bodyweight Only",
+      "description": "No equipment needed - perfect for home workouts",
+      "exercises": [
+        {
+          "exerciseId": "push-ups",
+          "name": "Push-ups",
+          "defaultSets": 4,
+          "defaultReps": 15
+        },
+        {
+          "exerciseId": "pull-ups",
+          "name": "Pull-ups",
+          "defaultSets": 3,
+          "defaultReps": 10
+        },
+        {
+          "exerciseId": "squat",
+          "name": "Squat",
+          "defaultSets": 4,
+          "defaultReps": 20
+        },
+        {
+          "exerciseId": "lunges",
+          "name": "Lunges",
+          "defaultSets": 3,
+          "defaultReps": 12
+        },
+        {
+          "exerciseId": "plank",
+          "name": "Plank",
+          "defaultSets": 3,
+          "defaultReps": 60
+        },
+        {
+          "exerciseId": "pike-push-up",
+          "name": "Pike Push-up",
+          "defaultSets": 3,
+          "defaultReps": 12
+        }
+      ]
+    }
+  ]
+}

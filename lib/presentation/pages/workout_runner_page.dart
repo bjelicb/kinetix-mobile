@@ -30,14 +30,20 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _isPaused = false;
+  // Reserved for future inline editing feature
+  // ignore: unused_field
   String? _editingField; // 'weight', 'reps', 'rpe'
   String _editingValue = '';
+  // ignore: unused_field
   int? _editingExerciseIndex;
+  // ignore: unused_field
   int? _editingSetIndex;
   WorkoutSet? _deletedSet;
   int? _deletedExerciseIndex;
   int? _deletedSetIndex;
   ConfettiController? _confettiController;
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _exerciseKeys = {};
 
   @override
   void initState() {
@@ -249,7 +255,22 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       if (nextExerciseIndex < workout.exercises.length) {
         final nextExercise = workout.exercises[nextExerciseIndex];
         if (nextExercise.sets.isNotEmpty) {
-          Future.delayed(const Duration(milliseconds: 300), () {
+          // Scroll to next exercise before opening numpad
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (mounted && _scrollController.hasClients) {
+              final key = _exerciseKeys[nextExerciseIndex];
+              if (key != null && key.currentContext != null) {
+                Scrollable.ensureVisible(
+                  key.currentContext!,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  alignment: 0.1, // Slight offset from top
+                );
+              }
+            }
+          });
+          
+          Future.delayed(const Duration(milliseconds: 700), () {
             if (mounted) {
               final nextSet = nextExercise.sets[0];
               _showNumpad('weight', nextExerciseIndex, 0, nextSet.weight.toString(), updatedWorkout);
@@ -315,7 +336,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
     }
   }
   
-  void _undoDeleteSet(workout) {
+  void _undoDeleteSet(Workout workout) {
     if (_deletedSet == null || 
         _deletedExerciseIndex == null || 
         _deletedSetIndex == null) {
@@ -357,7 +378,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
     _deletedSetIndex = null;
   }
 
-  Future<void> _finishWorkout(workout) async {
+  Future<void> _finishWorkout(Workout workout) async {
     AppHaptic.heavy();
     
     try {
@@ -412,6 +433,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   void dispose() {
     _timer?.cancel();
     _confettiController?.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -455,7 +477,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
               );
             },
                   loading: () => const Center(
-                    child: const ShimmerCard(height: 200),
+                    child: ShimmerCard(height: 200),
                   ),
             error: (error, stack) => Center(
               child: Text('Error: $error'),
@@ -536,7 +558,15 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       );
     }
     
+    // Initialize keys for all exercises if not already done
+    for (int i = 0; i < workout.exercises.length; i++) {
+      if (!_exerciseKeys.containsKey(i)) {
+        _exerciseKeys[i] = GlobalKey();
+      }
+    }
+    
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: workout.exercises.length,
       itemBuilder: (context, index) {
@@ -548,6 +578,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
 
   Widget _buildExerciseCard(BuildContext context, exercise, int exerciseIndex, workout) {
     return GradientCard(
+      key: _exerciseKeys[exerciseIndex],
       gradient: AppGradients.card,
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 16),
@@ -744,7 +775,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
     );
   }
 
-  Widget _buildFinishButton(BuildContext context, workout) {
+  Widget _buildFinishButton(BuildContext context, Workout workout) {
     return Stack(
       children: [
         Container(

@@ -5,39 +5,84 @@ import '../../core/theme/gradients.dart';
 import 'gradient_card.dart';
 
 class StrengthProgressionChart extends StatefulWidget {
-  const StrengthProgressionChart({super.key});
+  final Map<String, List<Map<String, double>>> exerciseData;
+  final bool isLoading;
+  
+  const StrengthProgressionChart({
+    super.key,
+    required this.exerciseData,
+    this.isLoading = false,
+  });
 
   @override
   State<StrengthProgressionChart> createState() => _StrengthProgressionChartState();
 }
 
 class _StrengthProgressionChartState extends State<StrengthProgressionChart> {
-  String _selectedExercise = 'Bench Press';
+  String? _selectedExercise;
   
-  final List<String> _exercises = ['Bench Press', 'Squat', 'Deadlift'];
+  List<String> get _exercises => widget.exerciseData.keys.toList();
   
-  // Mock data for last 30 days
-  final Map<String, List<FlSpot>> _exerciseData = {
-    'Bench Press': List.generate(30, (index) {
-      final date = DateTime.now().subtract(Duration(days: 29 - index));
-      final weight = 80.0 + (index * 0.5) + (index % 7) * 2.0; // Progressive increase
-      return FlSpot(index.toDouble(), weight);
-    }),
-    'Squat': List.generate(30, (index) {
-      final date = DateTime.now().subtract(Duration(days: 29 - index));
-      final weight = 100.0 + (index * 0.7) + (index % 7) * 2.5;
-      return FlSpot(index.toDouble(), weight);
-    }),
-    'Deadlift': List.generate(30, (index) {
-      final date = DateTime.now().subtract(Duration(days: 29 - index));
-      final weight = 140.0 + (index * 0.8) + (index % 7) * 3.0;
-      return FlSpot(index.toDouble(), weight);
-    }),
-  };
+  Map<String, List<FlSpot>> get _exerciseSpots {
+    final result = <String, List<FlSpot>>{};
+    for (final entry in widget.exerciseData.entries) {
+      result[entry.key] = entry.value.map((point) {
+        return FlSpot(point['x'] ?? 0.0, point['y'] ?? 0.0);
+      }).toList();
+    }
+    return result;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_exercises.isNotEmpty) {
+      _selectedExercise = _exercises.first;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final selectedData = _exerciseData[_selectedExercise] ?? [];
+    if (widget.isLoading) {
+      return GradientCard(
+        gradient: AppGradients.card,
+        padding: const EdgeInsets.all(20),
+        child: const SizedBox(
+          height: 300,
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+    
+    if (_exercises.isEmpty || _selectedExercise == null) {
+      return GradientCard(
+        gradient: AppGradients.card,
+        padding: const EdgeInsets.all(20),
+        child: SizedBox(
+          height: 300,
+          child: Center(
+            child: Text(
+              'No progression data available',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    final selectedData = _exerciseSpots[_selectedExercise] ?? [];
+    final allSpots = _exerciseSpots.values.expand((e) => e).toList();
+    final maxY = allSpots.isEmpty 
+        ? 180.0 
+        : (allSpots.map((s) => s.y).reduce((a, b) => a > b ? a : b) * 1.1);
+    final minY = allSpots.isEmpty 
+        ? 70.0 
+        : (allSpots.map((s) => s.y).reduce((a, b) => a < b ? a : b) * 0.9);
+    final maxX = allSpots.isEmpty 
+        ? 29.0 
+        : (allSpots.map((s) => s.x).reduce((a, b) => a > b ? a : b));
     
     return GradientCard(
       gradient: AppGradients.card,
@@ -140,9 +185,9 @@ class _StrengthProgressionChartState extends State<StrengthProgressionChart> {
                   ),
                 ),
                 minX: 0,
-                maxX: 29,
-                minY: 70,
-                maxY: 180,
+                maxX: maxX > 0 ? maxX : 29,
+                minY: minY > 0 ? minY : 70,
+                maxY: maxY > 0 ? maxY : 180,
                 lineBarsData: [
                   LineChartBarData(
                     spots: selectedData,

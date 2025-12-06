@@ -34,9 +34,11 @@ class NutritionSummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              Expanded(
+                child: Text(
                 'Nutrition Summary',
                 style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
               Icon(
                 Icons.restaurant_rounded,
@@ -110,14 +112,19 @@ class NutritionSummaryCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            Expanded(
+              child: Text(
               label,
               style: Theme.of(context).textTheme.titleSmall,
             ),
-            Text(
+            ),
+            Flexible(
+              child: Text(
               '${current.toStringAsFixed(0)} / ${target.toStringAsFixed(0)} $unit',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.end,
               ),
             ),
           ],
