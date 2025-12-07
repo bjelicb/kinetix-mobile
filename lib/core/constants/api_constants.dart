@@ -19,6 +19,10 @@ class ApiConstants {
     }
     
     // Android/iOS koriste IP adresu računara
+    // VAŽNO: Proverite da li je ova IP adresa ispravna!
+    // Pronađite IP adresu sa: ipconfig (Windows) ili ifconfig (Mac/Linux)
+    // Telefon i računar moraju biti na istoj WiFi mreži
+    // Ako se ne možete ulogovati, proverite IP adresu i ažurirajte je ovde
     return 'http://192.168.0.27:3000/api';
   }
   
@@ -52,6 +56,27 @@ class ApiConstants {
   
   // Gamification Endpoints
   static const String gamificationStatus = '/gamification/status';
+  
+  // Admin Endpoints
+  static const String adminUsers = '/admin/users';
+  static const String adminStats = '/admin/stats';
+  static const String adminAssignClient = '/admin/assign-client';
+  static const String adminPlans = '/admin/plans';
+  static const String adminWorkoutsAll = '/admin/workouts/all';
+  static const String adminWorkoutsStats = '/admin/workouts/stats';
+  static String adminUpdateUser(String userId) => '/admin/users/$userId';
+  static String adminDeleteUser(String userId) => '/admin/users/$userId';
+  static String adminUpdateUserStatus(String userId) => '/admin/users/$userId/status';
+  static String adminUpdateWorkoutStatus(String workoutId) => '/admin/workouts/$workoutId/status';
+  static String adminDeleteWorkout(String workoutId) => '/admin/workouts/$workoutId';
+  
+  // Plan Management Endpoints
+  static const String plans = '/plans';
+  static String planById(String planId) => '/plans/$planId';
+  static String planUpdate(String planId) => '/plans/$planId';
+  static String planDelete(String planId) => '/plans/$planId';
+  static String planAssign(String planId) => '/plans/$planId/assign';
+  static String planDuplicate(String planId) => '/plans/$planId/duplicate';
   
   // Headers
   static const String authorizationHeader = 'Authorization';

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
+import '../../core/constants/app_assets.dart';
 import '../../presentation/controllers/auth_controller.dart';
+import '../../presentation/controllers/theme_controller.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/neon_button.dart';
 import '../../presentation/widgets/gradient_card.dart';
+import '../../presentation/widgets/trainer_avatar.dart';
+import '../../presentation/widgets/auth_overlay.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -51,42 +56,84 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authControllerProvider);
     
     return GradientBackground(
+      gradient: AppGradients.loginBackground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 60),
-                    // Logo with gradient
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.5),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: MediaQuery.of(context).size.height * 0.05,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                    // Hex logo with smooth shimmer animation
+                    Image.asset(
+                      AppAssets.logoHex,
+                      width: MediaQuery.of(context).size.width * 0.35,
+                      height: MediaQuery.of(context).size.width * 0.35,
+                    )
+                        .animate(onPlay: (controller) => controller.repeat())
+                        .fadeIn(duration: 600.ms, curve: Curves.easeOutCubic)
+                        .shimmer(
+                          duration: 2500.ms,
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          curve: Curves.easeInOutCubic,
+                        ),
+                    const SizedBox(height: 24),
+                    // Kinetix branding text with smooth animation
+                    ShaderMask(
+                      shaderCallback: (bounds) => AppGradients.primary.createShader(
+                        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
                       ),
                       child: Text(
                         'KINETIX',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 6,
+                          color: Colors.white,
                         ),
                       ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 700.ms, delay: 100.ms, curve: Curves.easeOutCubic)
+                        .slideY(begin: -0.3, end: 0, duration: 700.ms, delay: 100.ms, curve: Curves.easeOutCubic),
+                    const SizedBox(height: 32),
+                    // Trainer avatars with smooth animation
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TrainerAvatar(
+                          image: AppAssets.trainerMilan,
+                          theme: TrainerTheme.milan,
+                          size: MediaQuery.of(context).size.width * 0.18,
+                        )
+                            .animate()
+                            .fadeIn(duration: 800.ms, delay: 200.ms, curve: Curves.easeOutCubic)
+                            .scale(begin: const Offset(0.8, 0.8), duration: 800.ms, delay: 200.ms, curve: Curves.easeOutCubic),
+                        const SizedBox(width: 32),
+                        TrainerAvatar(
+                          image: AppAssets.trainerAca,
+                          theme: TrainerTheme.aca,
+                          size: MediaQuery.of(context).size.width * 0.18,
+                        )
+                            .animate()
+                            .fadeIn(duration: 800.ms, delay: 400.ms, curve: Curves.easeOutCubic)
+                            .scale(begin: const Offset(0.8, 0.8), duration: 800.ms, delay: 400.ms, curve: Curves.easeOutCubic),
+                      ],
                     ),
                     const SizedBox(height: 48),
                     
-                    // Login Card
+                    // Login Card with smooth entrance animation
                     GradientCard(
                       gradient: AppGradients.card,
                       padding: const EdgeInsets.all(24),
@@ -97,13 +144,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             'Welcome Back',
                             style: Theme.of(context).textTheme.headlineSmall,
                             textAlign: TextAlign.center,
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 600.ms, delay: 600.ms, curve: Curves.easeOutCubic)
+                              .slideY(begin: 0.2, end: 0, duration: 600.ms, delay: 600.ms, curve: Curves.easeOutCubic),
                           const SizedBox(height: 8),
                           Text(
                             'Sign in to continue',
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 600.ms, delay: 700.ms, curve: Curves.easeOutCubic)
+                              .slideY(begin: 0.2, end: 0, duration: 600.ms, delay: 700.ms, curve: Curves.easeOutCubic),
                           const SizedBox(height: 32),
                           TextFormField(
                             controller: _emailController,
@@ -141,7 +194,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               }
                               return null;
                             },
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 600.ms, delay: 800.ms, curve: Curves.easeOutCubic)
+                              .slideY(begin: 0.2, end: 0, duration: 600.ms, delay: 800.ms, curve: Curves.easeOutCubic),
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: _passwordController,
@@ -179,7 +235,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               }
                               return null;
                             },
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 600.ms, delay: 900.ms, curve: Curves.easeOutCubic)
+                              .slideY(begin: 0.2, end: 0, duration: 600.ms, delay: 900.ms, curve: Curves.easeOutCubic),
                           const SizedBox(height: 32),
                           NeonButton(
                             text: 'Login',
@@ -187,16 +246,38 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             onPressed: authState.isLoading ? null : _handleLogin,
                             isLoading: authState.isLoading,
                             gradient: AppGradients.primary,
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 600.ms, delay: 1000.ms, curve: Curves.easeOutCubic)
+                              .slideY(begin: 0.2, end: 0, duration: 600.ms, delay: 1000.ms, curve: Curves.easeOutCubic),
                         ],
                       ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 800.ms, delay: 500.ms, curve: Curves.easeOutCubic)
+                        .scale(begin: const Offset(0.95, 0.95), duration: 800.ms, delay: 500.ms, curve: Curves.easeOutCubic),
+                      ],
                     ),
-                    const SizedBox(height: 100),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+            // Full-screen overlay for login process
+            AnimatedOpacity(
+              opacity: authState.isLoading ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 400),
+              child: authState.isLoading
+                  ? IgnorePointer(
+                      ignoring: !authState.isLoading,
+                      child: AuthOverlay(
+                        key: const ValueKey('login_overlay'),
+                        statusText: 'Signing in...',
+                        loaderSize: 80,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
         ),
       ),
     );

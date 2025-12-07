@@ -86,6 +86,41 @@ class AppColors {
   static Color neonGlowPrimary = primary.withValues(alpha: 0.5);
   static Color neonGlowSecondary = secondary.withValues(alpha: 0.5);
   static Color neonGlowSuccess = success.withValues(alpha: 0.5);
+  
+  // Admin-specific subtle colors
+  static const Color adminCardBackground = surface;
+  static const Color adminCardBorder = Color(0xFF2D2D2D);
+  static Color adminAccent = primary.withValues(alpha: 0.3);
+  static Color adminIconColor = primary.withValues(alpha: 0.6);
+}
+
+// Trainer-Specific Color Palettes
+class TrainerThemes {
+  // Milan Theme - "War Room" Aesthetic
+  static const Color milanPrimary = Color(0xFFFF003C);      // Crimson Red
+  static const Color milanSecondary = Color(0xFFCC0029);    // Dark Red
+  static const Color milanAccent = Color(0xFFFF4466);       // Bright Red
+  
+  // Aca Theme - "High-Tech Lab" Aesthetic  
+  static const Color acaPrimary = Color(0xFF00F0FF);         // Electric Cyan
+  static const Color acaSecondary = Color(0xFF0EA5E9);       // Bright Blue
+  static const Color acaAccent = Color(0xFF22D4FF);          // Light Cyan
+  
+  // Gradients
+  static const LinearGradient milanGradient = LinearGradient(
+    colors: [milanPrimary, milanSecondary],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient acaGradient = LinearGradient(
+    colors: [acaPrimary, acaSecondary],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  // Neutral theme (fallback)
+  static const LinearGradient neutralGradient = AppColors.primaryGradient;
 }
 
 class AppSpacing {

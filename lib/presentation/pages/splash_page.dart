@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/gradients.dart';
 import '../../presentation/controllers/bootstrap_controller.dart';
 import '../../presentation/controllers/auth_controller.dart';
-import '../../presentation/widgets/gradient_background.dart';
+import '../../presentation/widgets/progress_wave_loader.dart';
 import '../../core/utils/shared_preferences_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -66,64 +65,29 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         });
       }
     });
-    return GradientBackground(
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF000000), // Deep void black
+      ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Animated Logo
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 1000),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.5),
-                            blurRadius: 40,
-                            spreadRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        'KINETIX',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  );
-                },
+              // Progress wave loader
+              const ProgressWaveLoader(
+                size: 100,
               ),
-              const SizedBox(height: 48),
-              // Loading Indicator
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
-                    strokeWidth: 3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
+              // Loading text
               Text(
                 'Loading...',
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

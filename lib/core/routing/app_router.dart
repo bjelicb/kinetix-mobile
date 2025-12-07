@@ -15,6 +15,7 @@ import '../../presentation/pages/check_in_history_page.dart';
 import '../../presentation/pages/analytics_page.dart';
 import '../../presentation/pages/settings_page.dart';
 import '../../presentation/pages/workout_history_page.dart';
+import '../../presentation/pages/admin_dashboard_page.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import '../../presentation/widgets/custom_bottom_nav.dart';
 import '../../core/theme/animations.dart';
@@ -275,6 +276,44 @@ GoRouter appRouter(AppRouterRef ref) {
               transitionDuration: AppAnimations.pageTransitionDuration,
             ),
           ),
+          GoRoute(
+            path: '/admin',
+            pageBuilder: (context, state) {
+              // SECURITY: Check admin role
+              final user = ref.read(authControllerProvider).valueOrNull;
+              if (user?.role != 'ADMIN') {
+                return CustomTransitionPage(
+                  key: state.pageKey,
+                  child: Scaffold(
+                    appBar: AppBar(title: const Text('Access Denied')),
+                    body: const Center(
+                      child: Text('You do not have permission to access this page.'),
+                    ),
+                  ),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: AppAnimations.pageTransitionDuration,
+                );
+              }
+              
+              return CustomTransitionPage(
+                key: state.pageKey,
+                child: const AdminDashboardPage(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  final slideAnimation = Tween<Offset>(
+                    begin: const Offset(1.0, 0.0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: AppAnimations.pageTransitionCurve,
+                  ));
+                  return SlideTransition(position: slideAnimation, child: child);
+                },
+                transitionDuration: AppAnimations.pageTransitionDuration,
+              );
+            },
+          ),
         ],
       ),
       GoRoute(
@@ -407,6 +446,7 @@ class HomeShell extends StatelessWidget {
     if (location == '/home') return 0;
     if (location == '/calendar') return 1;
     if (location == '/profile') return 2;
+    if (location == '/admin') return 3;
     return 0;
   }
   
@@ -420,6 +460,9 @@ class HomeShell extends StatelessWidget {
         break;
       case 2:
         context.go('/profile');
+        break;
+      case 3:
+        context.go('/admin');
         break;
     }
   }

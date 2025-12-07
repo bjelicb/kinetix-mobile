@@ -5,6 +5,9 @@ class UserCollection {
   String email = '';
   String role = '';
   String name = '';
+  String? trainerName; // Assigned trainer for clients
+  String? trainerId; // Trainer ID for clients
+  bool? isActive; // User active status
   DateTime lastSync = DateTime.now();
   
   UserCollection();
@@ -14,6 +17,9 @@ class UserCollection {
         email = json['email'] as String,
         role = json['role'] as String,
         name = json['name'] as String,
+        trainerName = json['trainerName'] as String?,
+        trainerId = json['trainerId'] as String?,
+        isActive = json['isActive'] as bool?,
         lastSync = DateTime.parse(json['lastSync'] as String);
   
   Map<String, dynamic> toJson() => {
@@ -21,6 +27,9 @@ class UserCollection {
         'email': email,
         'role': role,
         'name': name,
+        'trainerName': trainerName,
+        'trainerId': trainerId,
+        'isActive': isActive,
         'lastSync': lastSync.toIso8601String(),
       };
 }

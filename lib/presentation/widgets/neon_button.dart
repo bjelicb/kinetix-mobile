@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
+import '../../core/theme/app_colors.dart' show TrainerThemes;
 import '../../core/utils/haptic_feedback.dart';
+import '../controllers/theme_controller.dart';
+import 'smooth_loader.dart';
 
-class NeonButton extends StatefulWidget {
+class NeonButton extends ConsumerStatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final Gradient? gradient;
@@ -26,10 +30,10 @@ class NeonButton extends StatefulWidget {
   });
 
   @override
-  State<NeonButton> createState() => _NeonButtonState();
+  ConsumerState<NeonButton> createState() => _NeonButtonState();
 }
 
-class _NeonButtonState extends State<NeonButton>
+class _NeonButtonState extends ConsumerState<NeonButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -39,10 +43,10 @@ class _NeonButtonState extends State<NeonButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 200),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
   }
 
@@ -70,6 +74,9 @@ class _NeonButtonState extends State<NeonButton>
 
   @override
   Widget build(BuildContext context) {
+    final theme = ref.watch(themeControllerProvider);
+    final glowColor = _getThemeGlowColor(theme);
+
     return GestureDetector(
       onTapDown: widget.onPressed != null && !widget.isLoading
           ? _handleTapDown
@@ -89,7 +96,7 @@ class _NeonButtonState extends State<NeonButton>
             boxShadow: widget.showGlow && widget.onPressed != null
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.5),
+                      color: glowColor.withValues(alpha: 0.5),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -105,6 +112,8 @@ class _NeonButtonState extends State<NeonButton>
                       widget.onPressed!();
                     }
                   : null,
+              splashColor: glowColor.withValues(alpha: 0.3),
+              highlightColor: glowColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
               child: Container(
                 padding: widget.padding ??
@@ -115,13 +124,11 @@ class _NeonButtonState extends State<NeonButton>
                   children: [
                     if (widget.isLoading)
                       const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.textPrimary,
-                          ),
+                        width: 24,
+                        height: 24,
+                        child: SmoothLoader(
+                          size: 24,
+                          color: AppColors.textPrimary,
                         ),
                       )
                     else if (widget.icon != null) ...[
@@ -144,6 +151,17 @@ class _NeonButtonState extends State<NeonButton>
         ),
       ),
     );
+  }
+
+  Color _getThemeGlowColor(TrainerTheme theme) {
+    switch (theme) {
+      case TrainerTheme.milan:
+        return TrainerThemes.milanPrimary;
+      case TrainerTheme.aca:
+        return TrainerThemes.acaPrimary;
+      case TrainerTheme.neutral:
+        return AppColors.primary;
+    }
   }
 }
 

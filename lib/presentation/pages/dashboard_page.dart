@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
+import '../../core/theme/app_colors.dart' show TrainerThemes;
 import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/controllers/auth_controller.dart';
+import '../../presentation/controllers/theme_controller.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
 import '../../presentation/widgets/gradient_background.dart';
@@ -167,6 +169,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget _buildHeader(BuildContext context, user, WidgetRef ref) {
     final greeting = _getGreeting();
     final userName = user?.name ?? 'User';
+    final theme = ref.watch(themeControllerProvider);
+    final themeGradient = _getThemeGradient(theme);
+    final themeColor = _getThemeColor(theme);
     
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -188,7 +193,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     userName,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       foreground: Paint()
-                        ..shader = AppGradients.primary.createShader(
+                        ..shader = themeGradient.createShader(
                           const Rect.fromLTWH(0, 0, 200, 70),
                         ),
                     ),
@@ -200,11 +205,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
+                  gradient: themeGradient,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
+                      color: themeColor.withValues(alpha: 0.3),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
@@ -226,7 +231,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           const SizedBox(height: AppSpacing.md),
           // Streak Counter
           GradientCard(
-            gradient: AppGradients.purplePink,
+            gradient: themeGradient,
             padding: const EdgeInsets.all(16),
             margin: EdgeInsets.zero,
             child: Row(
@@ -263,12 +268,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   Widget _buildQuickStats(BuildContext context) {
+    final theme = ref.watch(themeControllerProvider);
+    final themeGradient = _getThemeGradient(theme);
+    
     return Container(
       height: 105,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
       child: Row(
         children: [
-          Expanded(child: _buildStatCardExpanded(context, '12', 'Workouts\nThis Week', AppGradients.primary)),
+          Expanded(child: _buildStatCardExpanded(context, '12', 'Workouts\nThis Week', themeGradient)),
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: _buildStatCardExpanded(context, '2.4k', 'Total\nVolume (kg)', AppGradients.secondary)),
           const SizedBox(width: AppSpacing.sm),
@@ -324,6 +332,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Widget _buildTodaysMission(BuildContext context, workouts, WidgetRef ref) {
     final todayWorkout = workouts.isNotEmpty ? workouts.first : null;
+    final theme = ref.watch(themeControllerProvider);
+    final themeGradient = _getThemeGradient(theme);
     
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -348,7 +358,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               )
           else
             GradientCard(
-              gradient: AppGradients.primary,
+              gradient: themeGradient,
               padding: const EdgeInsets.all(20),
               showGlow: true,
               pressEffect: true,
@@ -463,7 +473,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                             decoration: BoxDecoration(
                               gradient: workout.isCompleted
                                   ? AppGradients.success
-                                  : AppGradients.primary,
+                                  : _getThemeGradient(ref.watch(themeControllerProvider)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -634,6 +644,28 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ],
       ),
     );
+  }
+
+  Gradient _getThemeGradient(TrainerTheme theme) {
+    switch (theme) {
+      case TrainerTheme.milan:
+        return TrainerThemes.milanGradient;
+      case TrainerTheme.aca:
+        return TrainerThemes.acaGradient;
+      case TrainerTheme.neutral:
+        return AppGradients.primary;
+    }
+  }
+
+  Color _getThemeColor(TrainerTheme theme) {
+    switch (theme) {
+      case TrainerTheme.milan:
+        return TrainerThemes.milanPrimary;
+      case TrainerTheme.aca:
+        return TrainerThemes.acaPrimary;
+      case TrainerTheme.neutral:
+        return AppColors.primary;
+    }
   }
 }
 

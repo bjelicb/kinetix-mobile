@@ -1,5 +1,4 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: integer_literal_imprecise_as_double
 
 part of 'exercise_collection.dart';
 
@@ -17,7 +16,7 @@ extension GetExerciseCollectionCollection on Isar {
 
 const ExerciseCollectionSchema = CollectionSchema(
   name: r'ExerciseCollection',
-  id: 4473206050532594176, // JavaScript-safe integer
+  id: 4473206050532594274,
   properties: {
     r'name': PropertySchema(
       id: 0,
@@ -787,7 +786,7 @@ extension ExerciseCollectionQueryProperty
 
 const WorkoutSetSchema = Schema(
   name: r'WorkoutSet',
-  id: -5974587475565305856, // JavaScript-safe integer
+  id: -5974587475565306185,
   properties: {
     r'id': PropertySchema(
       id: 0,

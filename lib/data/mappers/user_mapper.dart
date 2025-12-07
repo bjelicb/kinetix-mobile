@@ -8,7 +8,10 @@ class UserMapper {
       email: collection.email,
       role: collection.role,
       name: collection.name,
+      trainerName: collection.trainerName,
+      trainerId: collection.trainerId,
       lastSync: collection.lastSync,
+      isActive: collection.isActive ?? true,
     );
   }
   
@@ -18,6 +21,9 @@ class UserMapper {
       ..email = entity.email
       ..role = entity.role
       ..name = entity.name
+      ..trainerName = entity.trainerName
+      ..trainerId = entity.trainerId
+      ..isActive = entity.isActive
       ..lastSync = entity.lastSync;
     
     if (isarId != null) {

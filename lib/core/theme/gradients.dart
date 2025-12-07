@@ -56,5 +56,23 @@ class AppGradients {
       Colors.white.withValues(alpha: 0.05),
     ],
   );
+  
+  // Trainer-Specific Gradients
+  static const milan = TrainerThemes.milanGradient;
+  static const aca = TrainerThemes.acaGradient;
+  static const neutral = TrainerThemes.neutralGradient;
+  
+  // Login Background Gradient
+  static const loginBackground = RadialGradient(
+    center: Alignment.center,
+    radius: 1.2,
+    colors: [
+      AppColors.primaryStart, // Subtle primary accent in the middle
+      AppColors.background,
+      AppColors.background,
+      AppColors.background,
+    ],
+    stops: [0.0, 0.4, 0.7, 1.0],
+  );
 }
 

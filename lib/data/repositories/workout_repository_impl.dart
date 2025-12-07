@@ -17,16 +17,27 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   
   @override
   Future<List<Workout>> getWorkouts() async {
-    final List<WorkoutCollection> collections = await _localDataSource.getWorkouts();
-    final workouts = <Workout>[];
-    
-    for (final WorkoutCollection collection in collections) {
-      final List<ExerciseCollection> exercises = await _localDataSource.getExercisesForWorkout(collection.id);
-      final exerciseEntities = exercises.map((e) => ExerciseMapper.toEntity(e)).toList();
-      workouts.add(WorkoutMapper.toEntity(collection, exerciseEntities));
+    try {
+      final List<WorkoutCollection> collections = await _localDataSource.getWorkouts();
+      final workouts = <Workout>[];
+      
+      for (final WorkoutCollection collection in collections) {
+        try {
+          final List<ExerciseCollection> exercises = await _localDataSource.getExercisesForWorkout(collection.id);
+          final exerciseEntities = exercises.map((e) => ExerciseMapper.toEntity(e)).toList();
+          workouts.add(WorkoutMapper.toEntity(collection, exerciseEntities));
+        } catch (e) {
+          // Continue with workout without exercises
+          workouts.add(WorkoutMapper.toEntity(collection, []));
+        }
+      }
+      
+      return workouts;
+    } catch (e) {
+      // If Isar fails, return empty list instead of crashing
+      // This allows the app to continue working even if local database has issues
+      return [];
     }
-    
-    return workouts;
   }
   
   @override

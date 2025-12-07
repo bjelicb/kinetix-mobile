@@ -50,8 +50,14 @@ class AuthController extends _$AuthController {
   }
   
   Future<void> logout() async {
-    await _repository.logout();
-    state = const AsyncValue.data(null);
+    state = const AsyncValue.loading();
+    try {
+      await _repository.logout();
+      state = const AsyncValue.data(null);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+      rethrow;
+    }
   }
 }
 

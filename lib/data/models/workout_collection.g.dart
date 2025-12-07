@@ -1,5 +1,4 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: integer_literal_imprecise_as_double
 
 part of 'workout_collection.dart';
 
@@ -8,7 +7,7 @@ part of 'workout_collection.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types, integer_literal_imprecise_as_double
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
 extension GetWorkoutCollectionCollection on Isar {
   IsarCollection<WorkoutCollection> get workoutCollections => this.collection();
@@ -56,7 +55,7 @@ const WorkoutCollectionSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'serverId': IndexSchema(
-      id: -7950187970872907776, // JavaScript-safe integer
+      id: -7950187970872907662,
       name: r'serverId',
       unique: true,
       replace: true,
@@ -71,7 +70,7 @@ const WorkoutCollectionSchema = CollectionSchema(
   },
   links: {
     r'exercises': LinkSchema(
-      id: -5771009875941223424, // JavaScript-safe integer (rounded)
+      id: -5771009875941223365,
       name: r'exercises',
       target: r'ExerciseCollection',
       single: false,

@@ -25,17 +25,45 @@ class AuthRepositoryImpl implements AuthRepository {
       // Get user data from response
       final userData = response['user'] as Map<String, dynamic>;
       
-      // Save user locally
-      final userCollection = UserCollection()
-        ..serverId = userData['_id'] as String? ?? userData['id'] as String
-        ..email = userData['email'] as String
-        ..role = userData['role'] as String
-        ..name = '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim()
-        ..lastSync = DateTime.now();
+      // Extract user data first
+      final userId = userData['_id'] as String? ?? userData['id'] as String;
+      final userEmail = userData['email'] as String;
+      final userRole = userData['role'] as String;
+      final userName = '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
       
-      await _localDataSource.saveUser(userCollection);
-      
-      return UserMapper.toEntity(userCollection);
+      // Try to save user locally (with error handling for Isar)
+      try {
+        final userCollection = UserCollection()
+          ..serverId = userId
+          ..email = userEmail
+          ..role = userRole
+          ..name = userName
+          ..lastSync = DateTime.now();
+        
+        await _localDataSource.saveUser(userCollection);
+        try {
+          return UserMapper.toEntity(userCollection);
+        } catch (mapperError) {
+          // Fallback to direct User creation
+          return User(
+            id: userId,
+            email: userEmail,
+            role: userRole,
+            name: userName.isNotEmpty ? userName : userEmail,
+            lastSync: DateTime.now(),
+          );
+        }
+      } catch (isarError) {
+        // Even if local save fails, return user from API response
+        // Create a temporary user entity without saving to Isar
+        return User(
+          id: userId,
+          email: userEmail,
+          role: userRole,
+          name: userName.isNotEmpty ? userName : userEmail,
+          lastSync: DateTime.now(),
+        );
+      }
     } catch (e) {
       // Re-throw with better error message
       throw Exception('Login failed: ${e.toString()}');
@@ -80,22 +108,41 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<User?> getCurrentUser() async {
     final token = await _storage.read(key: AppConstants.accessTokenKey);
-    if (token == null) return null;
+    if (token == null) {
+      return null;
+    }
     
     try {
       // Try to get from API first
       final userData = await _remoteDataSource.getCurrentUser();
       
-      // Save/update user locally
-      final userCollection = UserCollection()
-        ..serverId = userData['_id'] as String? ?? userData['id'] as String
-        ..email = userData['email'] as String
-        ..role = userData['role'] as String
-        ..name = '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim()
-        ..lastSync = DateTime.now();
+      // Backend /auth/me returns {id, email, role} - no firstName/lastName
+      // Use email as name if firstName/lastName not available
+      final userName = userData['firstName'] != null || userData['lastName'] != null
+          ? '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim()
+          : (userData['name'] as String? ?? userData['email'] as String);
       
-      await _localDataSource.saveUser(userCollection);
-      return UserMapper.toEntity(userCollection);
+      // Try to save/update user locally (with error handling for Isar)
+      try {
+        final userCollection = UserCollection()
+          ..serverId = userData['_id'] as String? ?? userData['id'] as String
+          ..email = userData['email'] as String
+          ..role = userData['role'] as String
+          ..name = userName
+          ..lastSync = DateTime.now();
+        
+        await _localDataSource.saveUser(userCollection);
+        return UserMapper.toEntity(userCollection);
+      } catch (isarError) {
+        // Even if local save fails, return user from API response
+        return User(
+          id: userData['_id'] as String? ?? userData['id'] as String,
+          email: userData['email'] as String,
+          role: userData['role'] as String,
+          name: userName,
+          lastSync: DateTime.now(),
+        );
+      }
     } catch (e) {
       // If API fails, try to get from local cache
       try {

@@ -7,6 +7,7 @@ import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
+import '../../presentation/widgets/auth_overlay.dart';
 import '../../presentation/widgets/progress_chart.dart';
 import '../../presentation/widgets/pr_tracker.dart';
 import '../../presentation/controllers/workout_controller.dart';
@@ -744,9 +745,32 @@ class ProfilePage extends ConsumerWidget {
 
     if (confirm == true) {
       AppHaptic.medium();
-      await ref.read(authControllerProvider.notifier).logout();
+      
+      // Show full-screen overlay during logout
       if (context.mounted) {
-        context.go('/login');
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          builder: (BuildContext context) {
+            return const AuthOverlay(
+              statusText: 'Logging out...',
+              loaderSize: 80,
+            );
+          },
+        );
+      }
+      
+      // Perform logout
+      await ref.read(authControllerProvider.notifier).logout();
+      
+      // Navigate to login after a brief delay for smooth transition
+      if (context.mounted) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (context.mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          context.go('/login');
+        }
       }
     }
   }

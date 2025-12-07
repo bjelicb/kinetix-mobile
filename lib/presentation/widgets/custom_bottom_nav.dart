@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/utils/haptic_feedback.dart';
+import '../controllers/auth_controller.dart';
 
-class CustomBottomNavBar extends StatefulWidget {
+class CustomBottomNavBar extends ConsumerStatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
 
@@ -14,10 +16,10 @@ class CustomBottomNavBar extends StatefulWidget {
   });
 
   @override
-  State<CustomBottomNavBar> createState() => _CustomBottomNavBarState();
+  ConsumerState<CustomBottomNavBar> createState() => _CustomBottomNavBarState();
 }
 
-class _CustomBottomNavBarState extends State<CustomBottomNavBar>
+class _CustomBottomNavBarState extends ConsumerState<CustomBottomNavBar>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -46,6 +48,10 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.valueOrNull;
+    final isAdmin = user?.role == 'ADMIN';
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -89,6 +95,15 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
                 icon: Icons.person_rounded,
                 label: 'Profile',
                 index: 2,
+                currentIndex: widget.currentIndex,
+                onTap: _handleTap,
+              ),
+              // ADMIN-ONLY TAB
+              if (isAdmin)
+                _NavItem(
+                  icon: Icons.admin_panel_settings_rounded,
+                  label: 'Command',
+                  index: 3,
                 currentIndex: widget.currentIndex,
                 onTap: _handleTap,
               ),

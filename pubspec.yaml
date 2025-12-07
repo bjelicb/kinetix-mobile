@@ -38,6 +38,7 @@ dependencies:
   # Animations
   animations: ^2.0.11
   lottie: ^3.1.0
+  flutter_animate: ^4.5.0
   
   # UI Components
   table_calendar: ^3.2.0
@@ -82,6 +83,14 @@ dev_dependencies:
   retrofit_generator: ^8.2.1
   riverpod_generator: ^2.3.9
   isar_generator: ^3.1.0+1
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo_hex.png"
+  adaptive_icon_background: "#0A0A0A"
+  adaptive_icon_foreground: "assets/images/logo_hex.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

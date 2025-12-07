@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
 import 'presentation/controllers/bootstrap_controller.dart';
+import 'presentation/widgets/loader_animation_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Start global loader animation immediately
+  LoaderAnimationManager().start();
   runApp(
     const ProviderScope(
       child: KinetixApp(),
