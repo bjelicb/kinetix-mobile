@@ -7,6 +7,7 @@ import '../data/models/user_collection.dart' if (dart.library.html) '../data/mod
 import '../data/models/workout_collection.dart' if (dart.library.html) '../data/models/workout_collection_stub.dart';
 import '../data/models/exercise_collection.dart' if (dart.library.html) '../data/models/exercise_collection_stub.dart';
 import '../data/models/checkin_collection.dart' if (dart.library.html) '../data/models/checkin_collection_stub.dart';
+import '../data/models/plan_collection.dart' if (dart.library.html) '../data/models/plan_collection_stub.dart';
 
 class IsarService {
   static Isar? _isar;
@@ -30,6 +31,7 @@ class IsarService {
           WorkoutCollectionSchema as dynamic,
           ExerciseCollectionSchema as dynamic,
           CheckInCollectionSchema as dynamic,
+          PlanCollectionSchema as dynamic,
         ],
         directory: dir.path,
       );

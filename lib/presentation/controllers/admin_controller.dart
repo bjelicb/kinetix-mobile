@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/admin_repository.dart';
@@ -182,9 +183,13 @@ class AdminController extends _$AdminController {
 
   Future<void> deleteUser(String userId) async {
     try {
+      debugPrint('[AdminController] deleteUser called with ID: $userId');
       await _repository.deleteUser(userId);
       ref.invalidateSelf();
-    } catch (e) {
+      debugPrint('[AdminController] deleteUser completed successfully');
+    } catch (e, stackTrace) {
+      debugPrint('[AdminController] ERROR deleting user: $e');
+      debugPrint('[AdminController] Stack trace: $stackTrace');
       throw Exception('Failed to delete user: ${e.toString()}');
     }
   }
@@ -225,7 +230,11 @@ class AdminController extends _$AdminController {
     try {
       await _repository.deleteWorkout(workoutId);
       ref.invalidateSelf();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Log detailed error for debugging
+      debugPrint('ERROR [AdminController.deleteWorkout]: Failed to delete workout $workoutId');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
       throw Exception('Failed to delete workout: ${e.toString()}');
     }
   }

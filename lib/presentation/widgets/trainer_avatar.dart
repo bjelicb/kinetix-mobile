@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/gradients.dart';
-import '../../core/constants/app_assets.dart';
+import '../../core/theme/app_colors.dart' show AppColors, TrainerThemes;
 import '../controllers/theme_controller.dart';
 
 class TrainerAvatar extends StatelessWidget {
@@ -50,17 +48,6 @@ class TrainerAvatar extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Gradient _getGradient() {
-    switch (theme) {
-      case TrainerTheme.milan:
-        return TrainerThemes.milanGradient;
-      case TrainerTheme.aca:
-        return TrainerThemes.acaGradient;
-      case TrainerTheme.neutral:
-        return AppGradients.primary;
-    }
   }
 
   Color _getAccentColor() {

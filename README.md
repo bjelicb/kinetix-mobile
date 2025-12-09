@@ -1,6 +1,19 @@
-# kinetix_mobile
+# Kinetix Mobile
 
-A new Flutter project.
+High-Performance Offline-First Gym App built with Flutter.
+
+---
+
+## 📚 **DOKUMENTACIJA**
+
+Sva dokumentacija je u `docs/` folderu:
+
+- ⭐ **STATUS:** [`docs/MOBILE_STATUS.md`](docs/MOBILE_STATUS.md) - **POČNI OVDE** (Trenutno stanje implementacije)
+- 📖 **Glavni Masterplan:** [`docs/MOBILE_MASTERPLAN.md`](docs/MOBILE_MASTERPLAN.md) (Arhitektura)
+- 🚀 **Verzije:** `docs/MOBILE_MASTERPLAN_V1.md` - V4 (Faze implementacije)
+- 📋 **Uputstvo:** [`docs/README.md`](docs/README.md)
+
+---
 
 ## Getting Started
 

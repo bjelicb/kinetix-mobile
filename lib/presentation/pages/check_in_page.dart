@@ -302,7 +302,13 @@ class _CheckInPageState extends State<CheckInPage> {
               GlassContainer(
                 borderRadius: 12,
                 padding: const EdgeInsets.all(12),
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 child: const Icon(
                   Icons.close_rounded,
                   color: AppColors.textPrimary,

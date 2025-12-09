@@ -6,6 +6,7 @@ import '../data/datasources/local_data_source.dart';
 import '../data/datasources/remote_data_source.dart';
 import '../data/models/workout_collection.dart' if (dart.library.html) '../data/models/workout_collection_stub.dart';
 import '../data/models/checkin_collection.dart' if (dart.library.html) '../data/models/checkin_collection_stub.dart';
+import '../data/mappers/plan_mapper.dart';
 import 'cloudinary_upload_service.dart';
 
 class SyncManager {
@@ -78,8 +79,9 @@ class SyncManager {
   Future<void> _pushChanges() async {
     final dirtyWorkouts = await _localDataSource.getDirtyWorkouts();
     final unsyncedCheckIns = await _localDataSource.getUnsyncedCheckIns();
+    final dirtyPlans = await _localDataSource.getDirtyPlans();
     
-    if (dirtyWorkouts.isEmpty && unsyncedCheckIns.isEmpty) {
+    if (dirtyWorkouts.isEmpty && unsyncedCheckIns.isEmpty && dirtyPlans.isEmpty) {
       return; // Nothing to sync
     }
     
@@ -122,7 +124,19 @@ class SyncManager {
       });
     }
     
-    if (newLogs.isEmpty && newCheckIns.isEmpty) {
+    // Prepare plans for API
+    final plansToPush = <Map<String, dynamic>>[];
+    for (final plan in dirtyPlans) {
+      try {
+        final planEntity = PlanMapper.fromCollection(plan);
+        final planDto = PlanMapper.toDto(planEntity);
+        plansToPush.add(planDto);
+      } catch (e) {
+        debugPrint('Error converting plan ${plan.planId} to DTO: $e');
+      }
+    }
+    
+    if (newLogs.isEmpty && newCheckIns.isEmpty && plansToPush.isEmpty) {
       return; // Nothing to sync
     }
     
@@ -130,6 +144,7 @@ class SyncManager {
       'syncedAt': DateTime.now().toIso8601String(),
       'newLogs': newLogs,
       'newCheckIns': newCheckIns,
+      'plans': plansToPush,
     };
     
     try {
@@ -146,6 +161,13 @@ class SyncManager {
       for (final checkIn in unsyncedCheckIns) {
         checkIn.isSynced = true;
         await _localDataSource.saveCheckIn(checkIn);
+      }
+      
+      // Mark plans as synced
+      for (final plan in dirtyPlans) {
+        plan.isDirty = false;
+        plan.lastSync = DateTime.now();
+        await _localDataSource.savePlan(plan);
       }
       
       // Update last sync time in user collection
@@ -226,7 +248,23 @@ class SyncManager {
                 debugPrint('Resolved $processed/${conflictCheckIns.length} check-in conflicts');
               }
               
-              final totalConflicts = (conflictWorkouts?.length ?? 0) + (conflictCheckIns?.length ?? 0);
+              // Process conflicted plans (server wins)
+              final conflictPlans = responseData['plans'] as List<dynamic>?;
+              if (conflictPlans != null && conflictPlans.isNotEmpty) {
+                debugPrint('Processing ${conflictPlans.length} conflicted plans...');
+                int processed = 0;
+                for (final planData in conflictPlans) {
+                  try {
+                    await _processServerPlan(planData as Map<String, dynamic>);
+                    processed++;
+                  } catch (planError) {
+                    debugPrint('  - Failed to resolve conflict for plan ${planData['_id']}: $planError');
+                  }
+                }
+                debugPrint('Resolved $processed/${conflictPlans.length} plan conflicts');
+              }
+              
+              final totalConflicts = (conflictWorkouts?.length ?? 0) + (conflictCheckIns?.length ?? 0) + (conflictPlans?.length ?? 0);
               debugPrint('=== CONFLICT RESOLUTION COMPLETED: $totalConflicts total conflicts resolved (Server Wins policy) ===');
             }
           }
@@ -300,30 +338,43 @@ class SyncManager {
 
   /// Step 3: Pull changes from server
   Future<void> _pullChanges() async {
+    debugPrint('═══════════════════════════════════════════════════════════');
+    debugPrint('[SyncManager] _pullChanges() START');
+    
     final users = await _localDataSource.getUsers();
     DateTime lastSync;
     
     if (users.isNotEmpty) {
       lastSync = users.first.lastSync;
+      debugPrint('[SyncManager] → Last sync from user: ${lastSync.toIso8601String()}');
     } else {
       // Default to 7 days ago if no last sync
       lastSync = DateTime.now().subtract(const Duration(days: 7));
+      debugPrint('[SyncManager] → No user found, using default: ${lastSync.toIso8601String()}');
     }
     
     try {
-      debugPrint('Starting pull sync from ${lastSync.toIso8601String()}');
+      debugPrint('[SyncManager] → Calling getSyncChanges API with since: ${lastSync.toIso8601String()}');
       
       // Wrap API call with retry mechanism
       final changes = await _retryWithBackoff(
         () => _remoteDataSource.getSyncChanges(lastSync.toIso8601String()),
       );
       
+      debugPrint('[SyncManager] → API response received');
+      debugPrint('[SyncManager] → Response keys: ${changes.keys.toList()}');
+      
       final workouts = changes['workouts'] as List<dynamic>? ?? [];
       final checkIns = changes['checkIns'] as List<dynamic>? ?? [];
+      final plans = changes['plans'] as List<dynamic>? ?? [];
       
-      debugPrint('Pull sync received: ${workouts.length} workouts, ${checkIns.length} check-ins');
+      debugPrint('[SyncManager] → Parsed response:');
+      debugPrint('[SyncManager]   - Workouts: ${workouts.length}');
+      debugPrint('[SyncManager]   - CheckIns: ${checkIns.length}');
+      debugPrint('[SyncManager]   - Plans: ${plans.length}');
       
       // Process workouts with individual error handling
+      debugPrint('[SyncManager] → Processing workouts...');
       int processedWorkouts = 0;
       int failedWorkouts = 0;
       for (final workoutData in workouts) {
@@ -332,11 +383,13 @@ class SyncManager {
           processedWorkouts++;
         } catch (e) {
           failedWorkouts++;
-          debugPrint('Failed to process workout: ${workoutData['_id']} - $e');
+          debugPrint('[SyncManager] ✗ Failed to process workout: ${workoutData['_id']} - $e');
         }
       }
+      debugPrint('[SyncManager] → Workouts processed: $processedWorkouts, failed: $failedWorkouts');
       
       // Process check-ins with individual error handling
+      debugPrint('[SyncManager] → Processing check-ins...');
       int processedCheckIns = 0;
       int failedCheckIns = 0;
       for (final checkInData in checkIns) {
@@ -345,12 +398,43 @@ class SyncManager {
           processedCheckIns++;
         } catch (e) {
           failedCheckIns++;
-          debugPrint('Failed to process check-in: ${checkInData['_id']} - $e');
+          debugPrint('[SyncManager] ✗ Failed to process check-in: ${checkInData['_id']} - $e');
+        }
+      }
+      debugPrint('[SyncManager] → CheckIns processed: $processedCheckIns, failed: $failedCheckIns');
+      
+      // Process plans with individual error handling
+      debugPrint('═══════════════════════════════════════════════════════════');
+      debugPrint('[SyncManager] PLAN PULL SYNC START');
+      debugPrint('[SyncManager] → Plans received from server: ${plans.length}');
+      debugPrint('═══════════════════════════════════════════════════════════');
+      
+      int processedPlans = 0;
+      int failedPlans = 0;
+      for (final planData in plans) {
+        try {
+          final planId = planData['_id']?.toString() ?? 'unknown';
+          debugPrint('[SyncManager] → Processing plan: $planId');
+          await _processServerPlan(planData as Map<String, dynamic>);
+          processedPlans++;
+          debugPrint('[SyncManager] ✓ Plan processed: $planId');
+        } catch (e, stackTrace) {
+          failedPlans++;
+          final planId = planData['_id']?.toString() ?? 'unknown';
+          debugPrint('[SyncManager] ✗ Failed to process plan $planId: $e');
+          debugPrint('[SyncManager] Stack trace: $stackTrace');
         }
       }
       
+      // Log plan sync results
+      debugPrint('═══════════════════════════════════════════════════════════');
+      debugPrint('[SyncManager] PLAN PULL SYNC RESULTS');
+      debugPrint('[SyncManager] → Processed: $processedPlans');
+      debugPrint('[SyncManager] → Failed: $failedPlans');
+      debugPrint('═══════════════════════════════════════════════════════════');
+      
       // Update last sync time only if at least some data was processed
-      if (processedWorkouts > 0 || processedCheckIns > 0) {
+      if (processedWorkouts > 0 || processedCheckIns > 0 || processedPlans > 0) {
         if (users.isNotEmpty) {
           final user = users.first;
           user.lastSync = DateTime.now();
@@ -358,10 +442,10 @@ class SyncManager {
         }
       }
       
-      if (failedWorkouts > 0 || failedCheckIns > 0) {
-        debugPrint('Pull sync completed with errors: $failedWorkouts workouts, $failedCheckIns check-ins failed');
+      if (failedWorkouts > 0 || failedCheckIns > 0 || failedPlans > 0) {
+        debugPrint('Pull sync completed with errors: $failedWorkouts workouts, $failedCheckIns check-ins, $failedPlans plans failed');
       } else {
-        debugPrint('Pull sync completed successfully: $processedWorkouts workouts, $processedCheckIns check-ins processed');
+        debugPrint('Pull sync completed successfully: $processedWorkouts workouts, $processedCheckIns check-ins, $processedPlans plans processed');
       }
       
     } on DioException catch (e) {
@@ -436,6 +520,73 @@ class SyncManager {
       
     } catch (e) {
       debugPrint('Error processing server workout log: $e');
+    }
+  }
+  
+  /// Process server plan data and update/create local plan
+  Future<void> _processServerPlan(Map<String, dynamic> planData) async {
+    debugPrint('[SyncManager._processServerPlan] START');
+    try {
+      final serverId = planData['_id']?.toString() ?? '';
+      debugPrint('[SyncManager._processServerPlan] → Server plan ID: $serverId');
+      debugPrint('[SyncManager._processServerPlan] → Plan name: ${planData['name']}');
+      
+      if (serverId.isEmpty) {
+        debugPrint('[SyncManager._processServerPlan] ✗ Skipping plan without _id');
+        return;
+      }
+      
+      // Check if plan exists locally
+      debugPrint('[SyncManager._processServerPlan] → Checking if plan exists locally...');
+      final existingPlan = await _localDataSource.getPlanById(serverId);
+      
+      if (existingPlan != null) {
+        debugPrint('[SyncManager._processServerPlan] → Plan exists locally (Isar ID: ${existingPlan.id})');
+        debugPrint('[SyncManager._processServerPlan] → Local isDirty: ${existingPlan.isDirty}');
+        debugPrint('[SyncManager._processServerPlan] → Local updatedAt: ${existingPlan.updatedAt}');
+      } else {
+        debugPrint('[SyncManager._processServerPlan] → Plan does not exist locally - will create new');
+      }
+      
+      // Parse dates
+      final updatedAt = planData['updatedAt'] != null
+          ? DateTime.parse(planData['updatedAt'] as String)
+          : DateTime.now();
+      debugPrint('[SyncManager._processServerPlan] → Server updatedAt: $updatedAt');
+      
+      // Server Wins policy (ako lokalni postoji i nije dirty, ili ako server je noviji)
+      if (existingPlan != null) {
+        if (existingPlan.isDirty && updatedAt.isBefore(existingPlan.updatedAt)) {
+          // Local is newer and dirty, skip this update (local will push)
+          debugPrint('[SyncManager._processServerPlan] ⚠ Skipping - local version is newer and dirty');
+          debugPrint('[SyncManager._processServerPlan] → Local will be pushed instead');
+          return;
+        }
+        debugPrint('[SyncManager._processServerPlan] → Server wins - will overwrite local');
+      }
+      
+      // Convert DTO to Entity to Collection
+      debugPrint('[SyncManager._processServerPlan] → Converting DTO to Entity...');
+      final planEntity = PlanMapper.toEntity(planData);
+      debugPrint('[SyncManager._processServerPlan] → Converting Entity to Collection...');
+      final planCollection = PlanMapper.toCollection(planEntity);
+      
+      if (existingPlan != null) {
+        planCollection.id = existingPlan.id;
+        planCollection.isDirty = false; // Server overwrites local
+        debugPrint('[SyncManager._processServerPlan] → Preserving local Isar ID: ${planCollection.id}');
+      }
+      
+      planCollection.lastSync = DateTime.now();
+      debugPrint('[SyncManager._processServerPlan] → Saving to local database...');
+      await _localDataSource.savePlan(planCollection);
+      
+      debugPrint('[SyncManager._processServerPlan] ✓ Processed plan: ${planCollection.name} (Server ID: $serverId)');
+      
+    } catch (e, stackTrace) {
+      debugPrint('[SyncManager._processServerPlan] ✗✗✗ ERROR processing server plan: $e');
+      debugPrint('[SyncManager._processServerPlan] Stack trace: $stackTrace');
+      rethrow;
     }
   }
   

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_colors.dart' show AppColors, AppSpacing, TrainerThemes;
 import '../../core/theme/gradients.dart';
-import '../../core/theme/app_colors.dart' show TrainerThemes;
 import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import '../../presentation/controllers/theme_controller.dart';
@@ -16,6 +15,7 @@ import '../../presentation/widgets/client_alerts_card.dart';
 import '../../presentation/widgets/appointments_card.dart';
 import '../../presentation/widgets/search_bar.dart' as kinetix_search;
 import '../../presentation/widgets/filter_bottom_sheet.dart';
+import '../../presentation/widgets/plans/current_plan_card.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../services/exercise_library_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,6 +114,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       ),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+                    
+                    // Current Plan Card (Client only)
+                    if (!isTrainer)
+                      const SliverToBoxAdapter(
+                        child: CurrentPlanCard(),
+                      ),
                     
                     // Quick Stats (Client only)
                     if (!isTrainer)

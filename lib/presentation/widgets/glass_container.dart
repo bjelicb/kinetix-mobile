@@ -1,9 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_colors.dart' show AppColors, TrainerThemes;
 import '../../core/theme/gradients.dart';
-import '../../core/theme/app_colors.dart' show TrainerThemes;
 import '../controllers/theme_controller.dart';
 import 'hexagon_clipper.dart';
 
@@ -41,7 +40,6 @@ class _GlassContainerState extends ConsumerState<GlassContainer>
     with SingleTickerProviderStateMixin {
   late AnimationController _scaleController;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
 
   @override
   void initState() {
@@ -67,14 +65,12 @@ class _GlassContainerState extends ConsumerState<GlassContainer>
 
   void _handleTapDown(TapDownDetails details) {
     if (widget.animateOnTap) {
-      setState(() => _isPressed = true);
       _scaleController.forward();
     }
   }
 
   void _handleTapUp(TapUpDetails details) {
     if (widget.animateOnTap) {
-      setState(() => _isPressed = false);
       _scaleController.reverse();
     }
     if (widget.onTap != null) {
@@ -84,7 +80,6 @@ class _GlassContainerState extends ConsumerState<GlassContainer>
 
   void _handleTapCancel() {
     if (widget.animateOnTap) {
-      setState(() => _isPressed = false);
       _scaleController.reverse();
     }
   }

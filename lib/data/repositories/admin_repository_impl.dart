@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../datasources/remote_data_source.dart';
@@ -55,6 +56,7 @@ class AdminRepositoryImpl implements AdminRepository {
                 : '$firstName $lastName'.trim()
             ..trainerName = trainerName
             ..trainerId = trainerId
+            ..clientProfileId = userData['clientProfileId'] as String?
             ..isActive = isActive
             ..lastSync = DateTime.now();
           
@@ -67,7 +69,7 @@ class AdminRepositoryImpl implements AdminRepository {
       
       return users;
     } catch (e) {
-      print('[AdminRepository] Error in getAllUsers: $e');
+      developer.log('Error in getAllUsers: $e', name: 'AdminRepository', error: e);
       final errorMessage = e.toString();
       if (errorMessage.contains('Network') || errorMessage.contains('timeout')) {
         throw Exception('Network error: Unable to connect to server. Please check your connection.');
@@ -242,9 +244,13 @@ class AdminRepositoryImpl implements AdminRepository {
 
   @override
   Future<void> deleteUser(String userId) async {
+    developer.log('[AdminRepositoryImpl] deleteUser called with ID: $userId');
     try {
       await _remoteDataSource.deleteUser(userId);
-    } catch (e) {
+      developer.log('[AdminRepositoryImpl] deleteUser successful');
+    } catch (e, stackTrace) {
+      developer.log('[AdminRepositoryImpl] ERROR deleting user: $e');
+      developer.log('[AdminRepositoryImpl] Stack trace: $stackTrace');
       throw Exception('Failed to delete user: ${e.toString()}');
     }
   }
@@ -284,8 +290,12 @@ class AdminRepositoryImpl implements AdminRepository {
   @override
   Future<void> deleteWorkout(String workoutId) async {
     try {
+      developer.log('[AdminRepository] deleteWorkout called with ID: $workoutId');
       await _remoteDataSource.deleteWorkout(workoutId);
-    } catch (e) {
+      developer.log('[AdminRepository] deleteWorkout completed successfully');
+    } catch (e, stackTrace) {
+      developer.log('[AdminRepository] ERROR deleting workout: $e');
+      developer.log('[AdminRepository] Stack trace: $stackTrace');
       throw Exception('Failed to delete workout: ${e.toString()}');
     }
   }

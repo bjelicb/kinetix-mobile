@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 
 // Conditional imports - only import Isar on non-web platforms
 // Isar is used via dynamic calls, no direct import needed
@@ -6,6 +6,7 @@ import '../models/user_collection.dart' if (dart.library.html) '../models/user_c
 import '../models/workout_collection.dart' if (dart.library.html) '../models/workout_collection_stub.dart';
 import '../models/exercise_collection.dart' if (dart.library.html) '../models/exercise_collection_stub.dart';
 import '../models/checkin_collection.dart' if (dart.library.html) '../models/checkin_collection_stub.dart';
+import '../models/plan_collection.dart' if (dart.library.html) '../models/plan_collection_stub.dart';
 import '../../services/isar_service.dart';
 
 class LocalDataSource {
@@ -122,12 +123,24 @@ class LocalDataSource {
   Future<List<CheckInCollection>> getAllCheckIns() async {
     if (kIsWeb) return [];
     final isar = await _isar;
-    if (isar == null) return [];
-    final isarInstance = isar;
-    final all = await (isarInstance as dynamic).checkInCollections.where().findAll();
-    // Sort by timestamp descending (newest first)
-    all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    return all;
+    if (isar == null) {
+      debugPrint('[LocalDataSource] Isar is null, returning empty list');
+      return [];
+    }
+    try {
+      final isarInstance = isar;
+      // Use collection() directly instead of extension method (extensions don't work with dynamic)
+      final collection = isarInstance.collection<CheckInCollection>();
+      final all = await collection.where().findAll();
+      // Sort by timestamp descending (newest first)
+      all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      debugPrint('[LocalDataSource] Loaded ${all.length} check-ins');
+      return all;
+    } catch (e, stackTrace) {
+      debugPrint('[LocalDataSource] ERROR loading check-ins: $e');
+      debugPrint('[LocalDataSource] Stack trace: $stackTrace');
+      return [];
+    }
   }
   
   Future<CheckInCollection?> getCheckInById(int id) async {
@@ -135,7 +148,8 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return null;
     final isarInstance = isar;
-    return await (isarInstance as dynamic).checkInCollections.get(id);
+    final collection = isarInstance.collection<CheckInCollection>();
+    return await collection.get(id);
   }
   
   Future<void> deleteCheckIn(int id) async {
@@ -143,8 +157,9 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return;
     final isarInstance = isar;
-    await (isarInstance as dynamic).writeTxn(() async {
-      await (isarInstance as dynamic).checkInCollections.delete(id);
+    final collection = isarInstance.collection<CheckInCollection>();
+    await isarInstance.writeTxn(() async {
+      await collection.delete(id);
     });
   }
   
@@ -153,7 +168,8 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return [];
     final isarInstance = isar;
-    return await (isarInstance as dynamic).checkInCollections.filter().isSyncedEqualTo(false).findAll();
+    final collection = isarInstance.collection<CheckInCollection>();
+    return await collection.filter().isSyncedEqualTo(false).findAll();
   }
   
   Future<List<CheckInCollection>> getCheckInsWithoutPhotoUrl() async {
@@ -161,7 +177,8 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return [];
     final isarInstance = isar;
-    return await (isarInstance as dynamic).checkInCollections.filter().photoUrlIsNull().findAll();
+    final collection = isarInstance.collection<CheckInCollection>();
+    return await collection.filter().photoUrlIsNull().findAll();
   }
   
   /// Get today's check-in if it exists
@@ -173,7 +190,8 @@ class LocalDataSource {
     final now = DateTime.now();
     
     final isarInstance = isar;
-    final allCheckIns = await (isarInstance as dynamic).checkInCollections.where().findAll();
+    final collection = isarInstance.collection<CheckInCollection>();
+    final allCheckIns = await collection.where().findAll();
     
     // Find check-in for today
     for (final checkIn in allCheckIns) {
@@ -226,8 +244,115 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return;
     final isarInstance = isar;
-    await (isarInstance as dynamic).writeTxn(() async {
-      await (isarInstance as dynamic).checkInCollections.put(checkIn);
+    final collection = isarInstance.collection<CheckInCollection>();
+    await isarInstance.writeTxn(() async {
+      await collection.put(checkIn);
     });
+  }
+  
+  // Plan Operations
+  Future<PlanCollection?> getPlanById(String planId) async {
+    debugPrint('[LocalDataSource] getPlanById() START - planId: $planId');
+    if (kIsWeb) {
+      debugPrint('[LocalDataSource] ✗ Web platform - returning null');
+      return null;
+    }
+    final isar = await _isar;
+    if (isar == null) {
+      debugPrint('[LocalDataSource] ✗ Isar is null - returning null');
+      return null;
+    }
+    try {
+      final isarInstance = isar;
+      final collection = isarInstance.collection<PlanCollection>();
+      final result = await collection.filter().planIdEqualTo(planId).findFirst();
+      if (result != null) {
+        debugPrint('[LocalDataSource] ✓ Plan found: ${result.name} (ID: ${result.id})');
+      } else {
+        debugPrint('[LocalDataSource] ✗ Plan not found with ID: $planId');
+      }
+      return result;
+    } catch (e) {
+      debugPrint('[LocalDataSource] ✗✗✗ ERROR getting plan by ID: $e');
+      return null;
+    }
+  }
+  
+  Future<List<PlanCollection>> getAllPlans() async {
+    debugPrint('[LocalDataSource] getAllPlans() START');
+    if (kIsWeb) {
+      debugPrint('[LocalDataSource] ✗ Web platform - returning empty list');
+      return [];
+    }
+    final isar = await _isar;
+    if (isar == null) {
+      debugPrint('[LocalDataSource] ✗ Isar is null - returning empty list');
+      return [];
+    }
+    try {
+      final isarInstance = isar;
+      final collection = isarInstance.collection<PlanCollection>();
+      final result = await collection.where().findAll();
+      debugPrint('[LocalDataSource] ✓ Found ${result.length} plans in local database');
+      for (final plan in result) {
+        debugPrint('[LocalDataSource]   - Plan: ${plan.name} (ID: ${plan.planId}, Isar ID: ${plan.id})');
+      }
+      return result;
+    } catch (e) {
+      debugPrint('[LocalDataSource] ✗✗✗ ERROR getting all plans: $e');
+      return [];
+    }
+  }
+  
+  Future<List<PlanCollection>> getPlansByTrainer(String trainerId) async {
+    if (kIsWeb) return [];
+    final isar = await _isar;
+    if (isar == null) return [];
+    try {
+      final isarInstance = isar;
+      final collection = isarInstance.collection<PlanCollection>();
+      return await collection.filter().trainerIdEqualTo(trainerId).findAll();
+    } catch (e) {
+      debugPrint('[LocalDataSource] ERROR getting plans by trainer: $e');
+      return [];
+    }
+  }
+  
+  Future<List<PlanCollection>> getDirtyPlans() async {
+    if (kIsWeb) return [];
+    final isar = await _isar;
+    if (isar == null) return [];
+    try {
+      final isarInstance = isar;
+      final collection = isarInstance.collection<PlanCollection>();
+      return await collection.filter().isDirtyEqualTo(true).findAll();
+    } catch (e) {
+      debugPrint('[LocalDataSource] ERROR getting dirty plans: $e');
+      return [];
+    }
+  }
+  
+  Future<void> savePlan(PlanCollection plan) async {
+    debugPrint('[LocalDataSource] savePlan() START - planId: ${plan.planId}, name: ${plan.name}');
+    if (kIsWeb) {
+      debugPrint('[LocalDataSource] ✗ Web platform - skip save');
+      return;
+    }
+    final isar = await _isar;
+    if (isar == null) {
+      debugPrint('[LocalDataSource] ✗ Isar is null - skip save');
+      return;
+    }
+    try {
+      final isarInstance = isar;
+      final collection = isarInstance.collection<PlanCollection>();
+      await isarInstance.writeTxn(() async {
+        await collection.put(plan);
+      });
+      debugPrint('[LocalDataSource] ✓ Plan saved: ${plan.name} (planId: ${plan.planId}, Isar ID: ${plan.id})');
+      debugPrint('[LocalDataSource] → isDirty: ${plan.isDirty}, workoutDays: ${plan.workoutDays.length}');
+    } catch (e) {
+      debugPrint('[LocalDataSource] ✗✗✗ ERROR saving plan: $e');
+    }
   }
 }

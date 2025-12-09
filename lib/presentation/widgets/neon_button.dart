@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_colors.dart' show AppColors, TrainerThemes;
 import '../../core/theme/gradients.dart';
-import '../../core/theme/app_colors.dart' show TrainerThemes;
 import '../../core/utils/haptic_feedback.dart';
 import '../controllers/theme_controller.dart';
 import 'smooth_loader.dart';

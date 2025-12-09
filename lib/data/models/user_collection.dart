@@ -14,6 +14,7 @@ class UserCollection {
   late String name;
   String? trainerName; // Assigned trainer for clients
   String? trainerId; // Trainer ID for clients
+  String? clientProfileId; // Client profile ID for clients (used for plan assignment)
   bool? isActive; // User active status
   late DateTime lastSync;
   
@@ -26,6 +27,7 @@ class UserCollection {
         name = json['name'] as String,
         trainerName = json['trainerName'] as String?,
         trainerId = json['trainerId'] as String?,
+        clientProfileId = json['clientProfileId'] as String?,
         isActive = json['isActive'] as bool?,
         lastSync = DateTime.parse(json['lastSync'] as String);
   
@@ -36,6 +38,7 @@ class UserCollection {
         'name': name,
         'trainerName': trainerName,
         'trainerId': trainerId,
+        'clientProfileId': clientProfileId,
         'isActive': isActive,
         'lastSync': lastSync.toIso8601String(),
       };

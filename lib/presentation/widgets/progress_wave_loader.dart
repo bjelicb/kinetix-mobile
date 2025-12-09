@@ -112,7 +112,6 @@ class _ProgressWaveLoaderPainter extends CustomPainter {
 
     // Trail particles (4 particles with fade-out effect)
     final trailOpacities = [0.6, 0.4, 0.25, 0.1];
-    final trailSpacing = trackLength * 0.15; // Spacing between trail particles
     
     for (int i = 0; i < trailOpacities.length; i++) {
       final trailDelay = (i + 1) * 0.12; // Delay for each trail particle

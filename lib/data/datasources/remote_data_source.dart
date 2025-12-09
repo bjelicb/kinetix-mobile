@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_constants.dart';
@@ -27,7 +28,7 @@ class RemoteDataSource {
         final token = await _storage.read(key: AppConstants.accessTokenKey);
         // Reduced logging - only log warnings
         if (token == null && !options.path.contains('/auth/')) {
-          print('[RemoteDataSource] WARNING: No token for ${options.path}');
+          developer.log('[RemoteDataSource] WARNING: No token for ${options.path}', name: 'RemoteDataSource');
         }
         if (token != null) {
           options.headers[ApiConstants.authorizationHeader] =
@@ -308,15 +309,102 @@ class RemoteDataSource {
   }
   
   Future<Map<String, dynamic>> getCurrentPlan() async {
+    developer.log('═══════════════════════════════════════════════════════════', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] getCurrentPlan() START', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] → Base URL: ${_dio.options.baseUrl}', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] → API endpoint: ${ApiConstants.clientsCurrentPlan}', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] → Full URL: ${_dio.options.baseUrl}${ApiConstants.clientsCurrentPlan}', name: 'RemoteDataSource');
+    
+    // Check if token exists
+    final token = await _storage.read(key: AppConstants.accessTokenKey);
+    developer.log('[RemoteDataSource] → Token exists: ${token != null}', name: 'RemoteDataSource');
+    if (token != null) {
+      developer.log('[RemoteDataSource] → Token preview: ${token.substring(0, token.length > 20 ? 20 : token.length)}...', name: 'RemoteDataSource');
+    }
+    
     try {
+      developer.log('[RemoteDataSource] → Sending GET request to backend...', name: 'RemoteDataSource');
       final response = await _dio.get(ApiConstants.clientsCurrentPlan);
       
+      developer.log('[RemoteDataSource] → Response status: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Response data type: ${response.data.runtimeType}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Response data: ${response.data}', name: 'RemoteDataSource');
+      
       if (response.data['success'] == true) {
-        return response.data['data'];
+        final data = response.data['data'];
+        developer.log('[RemoteDataSource] → Success: true', name: 'RemoteDataSource');
+        developer.log('[RemoteDataSource] → Data type: ${data.runtimeType}', name: 'RemoteDataSource');
+        
+        if (data == null) {
+          developer.log('[RemoteDataSource] ✗ Data is null - no active plan', name: 'RemoteDataSource');
+          return <String, dynamic>{};
+        }
+        
+        if (data is Map) {
+          developer.log('[RemoteDataSource] → Data keys: ${data.keys.toList()}', name: 'RemoteDataSource');
+          developer.log('[RemoteDataSource] ✓ Plan data received', name: 'RemoteDataSource');
+          return Map<String, dynamic>.from(data);
+        } else {
+          developer.log('[RemoteDataSource] ✗ Data is not a Map: ${data.runtimeType}', name: 'RemoteDataSource');
+          return <String, dynamic>{};
+        }
+      } else {
+        final message = response.data['message'] ?? 'Failed to get current plan';
+        developer.log('[RemoteDataSource] ✗ Success: false - $message', name: 'RemoteDataSource');
+        throw Exception(message);
       }
-      throw Exception(response.data['message'] ?? 'Failed to get current plan');
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      developer.log('[RemoteDataSource] ✗✗✗ DioException occurred!', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Exception type: ${e.type}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Exception message: ${e.message}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Status code: ${e.response?.statusCode}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Response data: ${e.response?.data}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Request path: ${e.requestOptions.path}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Request baseUrl: ${e.requestOptions.baseUrl}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Request headers: ${e.requestOptions.headers}', name: 'RemoteDataSource');
+      
+      // Handle different DioException types
+      String errorMessage = 'Network error';
+      if (e.response != null && e.response!.data != null) {
+        final errorData = e.response!.data;
+        if (errorData is Map && errorData.containsKey('message')) {
+          errorMessage = errorData['message'] as String;
+        } else {
+          errorMessage = 'HTTP ${e.response!.statusCode}: ${errorData.toString()}';
+        }
+      } else {
+        // No response - likely network/CORS issue
+        switch (e.type) {
+          case DioExceptionType.connectionTimeout:
+            errorMessage = 'Connection timeout - check if backend is running';
+            break;
+          case DioExceptionType.sendTimeout:
+            errorMessage = 'Send timeout';
+            break;
+          case DioExceptionType.receiveTimeout:
+            errorMessage = 'Receive timeout';
+            break;
+          case DioExceptionType.badResponse:
+            errorMessage = 'Bad response: ${e.response?.statusCode}';
+            break;
+          case DioExceptionType.cancel:
+            errorMessage = 'Request cancelled';
+            break;
+          case DioExceptionType.connectionError:
+            errorMessage = 'Connection error - check CORS settings or backend URL';
+            break;
+          default:
+            errorMessage = 'Network error: ${e.message}';
+        }
+      }
+      
+      developer.log('[RemoteDataSource] → Final error message: $errorMessage', name: 'RemoteDataSource');
+      developer.log('═══════════════════════════════════════════════════════════', name: 'RemoteDataSource');
+      throw Exception(errorMessage);
+    } catch (e) {
+      developer.log('[RemoteDataSource] ✗✗✗ Unexpected error: $e', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Error type: ${e.runtimeType}', name: 'RemoteDataSource');
+      throw Exception('Unexpected error: $e');
     }
   }
   
@@ -477,10 +565,10 @@ class RemoteDataSource {
   // Admin Methods
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
-      print('[RemoteDataSource] Calling GET ${ApiConstants.adminUsers}');
+      developer.log('Calling GET ${ApiConstants.adminUsers}', name: 'RemoteDataSource');
       final response = await _dio.get(ApiConstants.adminUsers);
-      print('[RemoteDataSource] Response status: ${response.statusCode}');
-      print('[RemoteDataSource] Response data: ${response.data}');
+      developer.log('Response status: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('Response data: ${response.data}', name: 'RemoteDataSource');
       
       if (response.data['success'] == true) {
         final outerData = response.data['data'];
@@ -488,22 +576,22 @@ class RemoteDataSource {
         if (outerData is Map && outerData['success'] == true) {
           final innerData = outerData['data'];
           if (innerData is List) {
-            print('[RemoteDataSource] Returning ${innerData.length} users');
+            developer.log('Returning ${innerData.length} users', name: 'RemoteDataSource');
             return List<Map<String, dynamic>>.from(innerData);
           }
         }
         // Fallback: check if data is directly a list
         if (outerData is List) {
-          print('[RemoteDataSource] Returning ${outerData.length} users (direct list)');
+          developer.log('Returning ${outerData.length} users (direct list)', name: 'RemoteDataSource');
           return List<Map<String, dynamic>>.from(outerData);
         }
-        print('[RemoteDataSource] Data structure not recognized, returning empty');
+        developer.log('Data structure not recognized, returning empty', name: 'RemoteDataSource');
         return [];
       }
       throw Exception(response.data['message'] ?? 'Failed to get users');
     } on DioException catch (e) {
-      print('[RemoteDataSource] DioException: ${e.message}');
-      print('[RemoteDataSource] Response: ${e.response?.data}');
+      developer.log('DioException: ${e.message}', name: 'RemoteDataSource', error: e);
+      developer.log('Response: ${e.response?.data}', name: 'RemoteDataSource');
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }
@@ -606,28 +694,28 @@ class RemoteDataSource {
 
   Future<List<Map<String, dynamic>>> getAllWorkouts() async {
     try {
-      print('[RemoteDataSource] getAllWorkouts - calling API');
+      developer.log('getAllWorkouts - calling API', name: 'RemoteDataSource');
       final response = await _dio.get(ApiConstants.adminWorkoutsAll);
       
-      print('[RemoteDataSource] getAllWorkouts response: ${response.statusCode}');
-      print('[RemoteDataSource] getAllWorkouts response data: ${response.data}');
+      developer.log('getAllWorkouts response: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('getAllWorkouts response data: ${response.data}', name: 'RemoteDataSource');
       
       if (response.data['success'] == true) {
         final data = response.data['data'];
-        print('[RemoteDataSource] getAllWorkouts data type: ${data.runtimeType}');
+        developer.log('getAllWorkouts data type: ${data.runtimeType}', name: 'RemoteDataSource');
         
         if (data is List) {
           final workouts = List<Map<String, dynamic>>.from(data);
-          print('[RemoteDataSource] getAllWorkouts returning ${workouts.length} workouts');
+          developer.log('getAllWorkouts returning ${workouts.length} workouts', name: 'RemoteDataSource');
           return workouts;
         }
-        print('[RemoteDataSource] getAllWorkouts - data is not a List, returning empty list');
+        developer.log('getAllWorkouts - data is not a List, returning empty list', name: 'RemoteDataSource');
         return [];
       }
       throw Exception(response.data['message'] ?? 'Failed to get workouts');
     } on DioException catch (e) {
-      print('[RemoteDataSource] getAllWorkouts error: ${e.message}');
-      print('[RemoteDataSource] getAllWorkouts error response: ${e.response?.data}');
+      developer.log('getAllWorkouts error: ${e.message}', name: 'RemoteDataSource', error: e);
+      developer.log('getAllWorkouts error response: ${e.response?.data}', name: 'RemoteDataSource');
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }
@@ -684,13 +772,50 @@ class RemoteDataSource {
 
   Future<void> deleteUser(String userId) async {
     try {
-      final response = await _dio.delete(ApiConstants.adminDeleteUser(userId));
+      developer.log('[RemoteDataSource] deleteUser called with ID: $userId');
+      final url = ApiConstants.adminDeleteUser(userId);
+      developer.log('[RemoteDataSource] DELETE URL: $url');
       
-      if (response.data['success'] != true) {
-        throw Exception(response.data['message'] ?? 'Failed to delete user');
+      final response = await _dio.delete(url);
+      developer.log('[RemoteDataSource] Delete response status: ${response.statusCode}');
+      developer.log('[RemoteDataSource] Delete response data: ${response.data}');
+      developer.log('[RemoteDataSource] Delete response data type: ${response.data.runtimeType}');
+      
+      // Handle different response formats
+      final responseData = response.data;
+      bool success = false;
+      String? message;
+      
+      if (responseData is Map) {
+        // Check if response is wrapped in 'data' field (NestJS standard format)
+        if (responseData.containsKey('data') && responseData['data'] is Map) {
+          final data = responseData['data'] as Map;
+          success = data['success'] == true;
+          message = data['message'] as String?;
+        } else {
+          // Direct response format
+          success = responseData['success'] == true;
+          message = responseData['message'] as String?;
+        }
       }
+      
+      developer.log('[RemoteDataSource] Parsed success: $success, message: $message');
+      
+      if (!success) {
+        final errorMsg = message ?? 'Failed to delete user';
+        developer.log('[RemoteDataSource] Delete failed: $errorMsg');
+        throw Exception(errorMsg);
+      }
+      developer.log('[RemoteDataSource] Delete successful');
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      developer.log('[RemoteDataSource] DioException: ${e.message}');
+      developer.log('[RemoteDataSource] Response: ${e.response?.data}');
+      developer.log('[RemoteDataSource] Status code: ${e.response?.statusCode}');
+      throw Exception(e.response?.data['message'] ?? 'Network error: ${e.message}');
+    } catch (e, stackTrace) {
+      developer.log('[RemoteDataSource] Unexpected error: $e');
+      developer.log('[RemoteDataSource] Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
@@ -714,18 +839,42 @@ class RemoteDataSource {
 
   // Plan Management Methods
   Future<Map<String, dynamic>> getPlanById(String planId) async {
+    developer.log('═══════════════════════════════════════════════════════════', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] getPlanById() START', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] → Plan ID: $planId', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] → API endpoint: ${ApiConstants.planById(planId)}', name: 'RemoteDataSource');
+    developer.log('[RemoteDataSource] → Full URL: ${_dio.options.baseUrl}${ApiConstants.planById(planId)}', name: 'RemoteDataSource');
+    
     try {
       final response = await _dio.get(ApiConstants.planById(planId));
+      
+      developer.log('[RemoteDataSource] → Response status: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Response data: ${response.data}', name: 'RemoteDataSource');
       
       if (response.data['success'] == true) {
         final outerData = response.data['data'];
         if (outerData is Map && outerData['success'] == true && outerData['data'] != null) {
+          developer.log('[RemoteDataSource] ✓ Plan data received (nested format)', name: 'RemoteDataSource');
+          developer.log('═══════════════════════════════════════════════════════════', name: 'RemoteDataSource');
           return outerData['data'] as Map<String, dynamic>;
         }
+        developer.log('[RemoteDataSource] ✓ Plan data received (direct format)', name: 'RemoteDataSource');
+        developer.log('═══════════════════════════════════════════════════════════', name: 'RemoteDataSource');
         return outerData as Map<String, dynamic>;
       }
       throw Exception(response.data['message'] ?? 'Failed to get plan');
     } on DioException catch (e) {
+      developer.log('[RemoteDataSource] ✗✗✗ DioException in getPlanById!', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Exception type: ${e.type}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Status code: ${e.response?.statusCode}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource] → Response data: ${e.response?.data}', name: 'RemoteDataSource');
+      
+      // Check if it's a 403 Forbidden (role-based access)
+      if (e.response?.statusCode == 403 || e.response?.statusCode == 401) {
+        developer.log('[RemoteDataSource] → Access denied - may need CLIENT-specific endpoint', name: 'RemoteDataSource');
+      }
+      
+      developer.log('═══════════════════════════════════════════════════════════', name: 'RemoteDataSource');
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }
@@ -763,40 +912,49 @@ class RemoteDataSource {
 
   Future<Map<String, dynamic>> updatePlan(String planId, Map<String, dynamic> planData) async {
     try {
+      developer.log('updatePlan - planId: $planId, planData: $planData', name: 'RemoteDataSource');
       final response = await _dio.patch(
         ApiConstants.planUpdate(planId),
         data: planData,
       );
       
+      developer.log('updatePlan response: ${response.data}', name: 'RemoteDataSource');
+      
       if (response.data['success'] == true) {
-        final outerData = response.data['data'];
-        if (outerData is Map && outerData['success'] == true && outerData['data'] != null) {
-          return outerData['data'] as Map<String, dynamic>;
+        final planData = response.data['data'];
+        // Handle both cases: direct data or nested data structure
+        if (planData is Map) {
+          // Check if it's a double-wrapped response
+          if (planData['success'] == true && planData['data'] != null) {
+            return planData['data'] as Map<String, dynamic>;
         }
-        return outerData as Map<String, dynamic>;
+          return planData as Map<String, dynamic>;
+        }
+        throw Exception('Invalid response format: expected Map but got ${planData.runtimeType}');
       }
       throw Exception(response.data['message'] ?? 'Failed to update plan');
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      developer.log('updatePlan error: ${e.response?.data}', name: 'RemoteDataSource');
+      throw Exception(e.response?.data['message'] ?? e.message ?? 'Network error');
     }
   }
 
   Future<void> deletePlan(String planId) async {
     try {
-      print('[RemoteDataSource] deletePlan - planId: $planId');
+      developer.log('deletePlan - planId: $planId', name: 'RemoteDataSource');
       final response = await _dio.delete(ApiConstants.planDelete(planId));
       
-      print('[RemoteDataSource] deletePlan response: ${response.statusCode}');
-      print('[RemoteDataSource] deletePlan response data: ${response.data}');
+      developer.log('deletePlan response: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('deletePlan response data: ${response.data}', name: 'RemoteDataSource');
       
       if (response.data['success'] == true) {
         return;
       }
       throw Exception(response.data['message'] ?? 'Failed to delete plan');
     } on DioException catch (e) {
-      print('[RemoteDataSource] deletePlan error: ${e.message}');
-      print('[RemoteDataSource] deletePlan error response: ${e.response?.data}');
-      print('[RemoteDataSource] deletePlan error status: ${e.response?.statusCode}');
+      developer.log('deletePlan error: ${e.message}', name: 'RemoteDataSource', error: e);
+      developer.log('deletePlan error response: ${e.response?.data}', name: 'RemoteDataSource');
+      developer.log('deletePlan error status: ${e.response?.statusCode}', name: 'RemoteDataSource');
       if (e.response != null) {
         final errorData = e.response?.data;
         if (errorData is Map) {
@@ -813,7 +971,8 @@ class RemoteDataSource {
 
   Future<Map<String, dynamic>> assignPlanToClients(String planId, List<String> clientIds, DateTime startDate) async {
     try {
-      print('[RemoteDataSource] assignPlanToClients - planId: $planId, clientIds: $clientIds, startDate: ${startDate.toIso8601String()}');
+      developer.log('assignPlanToClients - planId: $planId, clientIds: $clientIds (count: ${clientIds.length}), startDate: ${startDate.toIso8601String()}', name: 'RemoteDataSource');
+      developer.log('assignPlanToClients - clientIds details: ${clientIds.map((id) => 'id=$id').join(", ")}', name: 'RemoteDataSource');
       
       final response = await _dio.post(
         ApiConstants.planAssign(planId),
@@ -823,8 +982,8 @@ class RemoteDataSource {
         },
       );
       
-      print('[RemoteDataSource] assignPlanToClients response: ${response.statusCode}');
-      print('[RemoteDataSource] assignPlanToClients response data: ${response.data}');
+      developer.log('assignPlanToClients response: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('assignPlanToClients response data: ${response.data}', name: 'RemoteDataSource');
       
       if (response.data['success'] == true) {
         final outerData = response.data['data'];
@@ -835,9 +994,9 @@ class RemoteDataSource {
       }
       throw Exception(response.data['message'] ?? 'Failed to assign plan');
     } on DioException catch (e) {
-      print('[RemoteDataSource] assignPlanToClients error: ${e.message}');
-      print('[RemoteDataSource] assignPlanToClients error response: ${e.response?.data}');
-      print('[RemoteDataSource] assignPlanToClients error status: ${e.response?.statusCode}');
+      developer.log('assignPlanToClients error: ${e.message}', name: 'RemoteDataSource', error: e);
+      developer.log('assignPlanToClients error response: ${e.response?.data}', name: 'RemoteDataSource');
+      developer.log('assignPlanToClients error status: ${e.response?.statusCode}', name: 'RemoteDataSource');
       // Provide more detailed error information
       if (e.response != null) {
         final errorData = e.response?.data;
@@ -855,11 +1014,11 @@ class RemoteDataSource {
 
   Future<Map<String, dynamic>> duplicatePlan(String planId) async {
     try {
-      print('[RemoteDataSource] duplicatePlan - planId: $planId');
+      developer.log('duplicatePlan - planId: $planId', name: 'RemoteDataSource');
       final response = await _dio.post(ApiConstants.planDuplicate(planId));
       
-      print('[RemoteDataSource] duplicatePlan response: ${response.statusCode}');
-      print('[RemoteDataSource] duplicatePlan response data: ${response.data}');
+      developer.log('duplicatePlan response: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('duplicatePlan response data: ${response.data}', name: 'RemoteDataSource');
       
       if (response.data['success'] == true) {
         final data = response.data['data'];
@@ -870,9 +1029,9 @@ class RemoteDataSource {
       }
       throw Exception(response.data['message'] ?? 'Failed to duplicate plan');
     } on DioException catch (e) {
-      print('[RemoteDataSource] duplicatePlan error: ${e.message}');
-      print('[RemoteDataSource] duplicatePlan error response: ${e.response?.data}');
-      print('[RemoteDataSource] duplicatePlan error status: ${e.response?.statusCode}');
+      developer.log('duplicatePlan error: ${e.message}', name: 'RemoteDataSource', error: e);
+      developer.log('duplicatePlan error response: ${e.response?.data}', name: 'RemoteDataSource');
+      developer.log('duplicatePlan error status: ${e.response?.statusCode}', name: 'RemoteDataSource');
       if (e.response != null) {
         final errorData = e.response?.data;
         if (errorData is Map) {
@@ -913,13 +1072,50 @@ class RemoteDataSource {
 
   Future<void> deleteWorkout(String workoutId) async {
     try {
-      final response = await _dio.delete(ApiConstants.adminDeleteWorkout(workoutId));
+      developer.log('[RemoteDataSource] deleteWorkout called with ID: $workoutId');
+      final url = ApiConstants.adminDeleteWorkout(workoutId);
+      developer.log('[RemoteDataSource] DELETE URL: $url');
       
-      if (response.data['success'] != true) {
-        throw Exception(response.data['message'] ?? 'Failed to delete workout');
+      final response = await _dio.delete(url);
+      developer.log('[RemoteDataSource] Delete response status: ${response.statusCode}');
+      developer.log('[RemoteDataSource] Delete response data: ${response.data}');
+      developer.log('[RemoteDataSource] Delete response data type: ${response.data.runtimeType}');
+      
+      // Handle different response formats
+      final responseData = response.data;
+      bool success = false;
+      String? message;
+      
+      if (responseData is Map) {
+        // Check if response is wrapped in 'data' field (NestJS standard format)
+        if (responseData.containsKey('data') && responseData['data'] is Map) {
+          final data = responseData['data'] as Map;
+          success = data['success'] == true;
+          message = data['message'] as String?;
+        } else {
+          // Direct response format
+          success = responseData['success'] == true;
+          message = responseData['message'] as String?;
+        }
       }
+      
+      developer.log('[RemoteDataSource] Parsed success: $success, message: $message');
+      
+      if (!success) {
+        final errorMsg = message ?? 'Failed to delete workout';
+        developer.log('[RemoteDataSource] Delete failed: $errorMsg');
+        throw Exception(errorMsg);
+      }
+      developer.log('[RemoteDataSource] Delete successful');
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      developer.log('[RemoteDataSource] DioException: ${e.message}');
+      developer.log('[RemoteDataSource] Response: ${e.response?.data}');
+      developer.log('[RemoteDataSource] Status code: ${e.response?.statusCode}');
+      throw Exception(e.response?.data['message'] ?? 'Network error: ${e.message}');
+    } catch (e, stackTrace) {
+      developer.log('[RemoteDataSource] Unexpected error: $e');
+      developer.log('[RemoteDataSource] Stack trace: $stackTrace');
+      rethrow;
     }
   }
 }

@@ -10,6 +10,7 @@ class UserMapper {
       name: collection.name,
       trainerName: collection.trainerName,
       trainerId: collection.trainerId,
+      clientProfileId: collection.clientProfileId,
       lastSync: collection.lastSync,
       isActive: collection.isActive ?? true,
     );
