@@ -16,8 +16,13 @@ import '../../presentation/widgets/appointments_card.dart';
 import '../../presentation/widgets/search_bar.dart' as kinetix_search;
 import '../../presentation/widgets/filter_bottom_sheet.dart';
 import '../../presentation/widgets/plans/current_plan_card.dart';
+import '../../presentation/widgets/balance_card.dart';
+import '../../presentation/widgets/weigh_in_card.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../services/exercise_library_service.dart';
+import '../../data/datasources/remote_data_source.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -31,11 +36,108 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   String? _searchQuery;
   FilterOptions _filterOptions = FilterOptions();
   List<String> _availableMuscleGroups = [];
+  Map<String, dynamic>? _balanceData;
+  bool _loadingBalance = false;
+  Map<String, dynamic>? _weighInData;
+  bool _loadingWeighIn = false;
 
   @override
   void initState() {
     super.initState();
     _loadMuscleGroups();
+    _loadBalance();
+    _loadWeighIn();
+  }
+
+  Future<void> _loadBalance() async {
+    final user = ref.read(authControllerProvider).valueOrNull;
+    if (user?.role != 'CLIENT') {
+      debugPrint('[DashboardPage] Skipping balance load - user is not CLIENT (role: ${user?.role})');
+      return;
+    }
+
+    debugPrint('[DashboardPage] _loadBalance START - Loading balance for client');
+
+    setState(() {
+      _loadingBalance = true;
+    });
+
+    try {
+      final storage = FlutterSecureStorage();
+      final dio = Dio();
+      final remoteDataSource = RemoteDataSource(dio, storage);
+      
+      debugPrint('[DashboardPage] Calling getGamificationStatus API...');
+      // Get balance from gamification status (includes balance info)
+      final status = await remoteDataSource.getGamificationStatus();
+      
+      debugPrint('[DashboardPage] API Response: $status');
+      debugPrint('[DashboardPage] Balance: ${status['balance']}, MonthlyBalance: ${status['monthlyBalance']}');
+      
+      final balance = status['balance'] ?? 0.0;
+      final monthlyBalance = status['monthlyBalance'] ?? 0.0;
+      
+      setState(() {
+        _balanceData = {
+          'balance': balance,
+          'monthlyBalance': monthlyBalance,
+          'lastBalanceReset': status['lastBalanceReset'],
+        };
+        _loadingBalance = false;
+      });
+      
+      debugPrint('[DashboardPage] _loadBalance SUCCESS - Balance: ${balance}€, Monthly: ${monthlyBalance}€');
+    } catch (e, stackTrace) {
+      debugPrint('[DashboardPage] _loadBalance ERROR: $e');
+      debugPrint('[DashboardPage] Stack trace: $stackTrace');
+      setState(() {
+        _loadingBalance = false;
+      });
+      // Silently fail - balance is not critical
+    }
+  }
+
+  Future<void> _loadWeighIn() async {
+    final user = ref.read(authControllerProvider).valueOrNull;
+    if (user?.role != 'CLIENT') {
+      debugPrint('[DashboardPage] Skipping weigh-in load - user is not CLIENT (role: ${user?.role})');
+      return;
+    }
+
+    debugPrint('[DashboardPage] _loadWeighIn START - Loading latest weigh-in for client');
+
+    setState(() {
+      _loadingWeighIn = true;
+    });
+
+    try {
+      final storage = FlutterSecureStorage();
+      final dio = Dio();
+      final remoteDataSource = RemoteDataSource(dio, storage);
+      
+      debugPrint('[DashboardPage] Calling getLatestWeighIn API...');
+      final latestWeighIn = await remoteDataSource.getLatestWeighIn();
+      
+      debugPrint('[DashboardPage] getLatestWeighIn API Response: $latestWeighIn');
+      
+      setState(() {
+        _weighInData = latestWeighIn;
+        _loadingWeighIn = false;
+      });
+      
+      if (latestWeighIn != null) {
+        debugPrint('[DashboardPage] _loadWeighIn SUCCESS - Weight: ${latestWeighIn['weight']}kg, Date: ${latestWeighIn['date']}');
+      } else {
+        debugPrint('[DashboardPage] _loadWeighIn SUCCESS - No weigh-in found');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[DashboardPage] _loadWeighIn ERROR: $e');
+      debugPrint('[DashboardPage] Stack trace: $stackTrace');
+      setState(() {
+        _loadingWeighIn = false;
+      });
+      // Silently fail - weigh-in is not critical
+    }
   }
 
   Future<void> _loadMuscleGroups() async {
@@ -89,6 +191,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(workoutControllerProvider);
+                  await _loadBalance();
+                  await _loadWeighIn();
                 },
                 color: AppColors.primary,
                 child: CustomScrollView(
@@ -115,10 +219,41 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
                     
-                    // Current Plan Card (Client only)
-                    if (!isTrainer)
+                    // Current Plan Card (Client only - not for Admin or Trainer)
+                    if (!isTrainer && user?.role == 'CLIENT')
                       const SliverToBoxAdapter(
                         child: CurrentPlanCard(),
+                      ),
+                    
+                    // Balance Card (Client only)
+                    if (!isTrainer)
+                      SliverToBoxAdapter(
+                        child: _loadingBalance
+                            ? const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Center(child: CircularProgressIndicator()),
+                              )
+                            : _balanceData != null
+                                ? BalanceCard(
+                                    balance: (_balanceData!['balance'] as num?)?.toDouble() ?? 0.0,
+                                    monthlyBalance: (_balanceData!['monthlyBalance'] as num?)?.toDouble() ?? 0.0,
+                                    lastBalanceReset: _balanceData!['lastBalanceReset'] != null
+                                        ? DateTime.parse(_balanceData!['lastBalanceReset'])
+                                        : null,
+                                  )
+                                : const SizedBox.shrink(),
+                      ),
+                    
+                    // Weigh-In Card (Client only)
+                    if (!isTrainer)
+                      SliverToBoxAdapter(
+                        child: WeighInCard(
+                          latestWeighIn: _weighInData,
+                          isLoading: _loadingWeighIn ?? false,
+                          onRefresh: () {
+                            _loadWeighIn();
+                          },
+                        ),
                       ),
                     
                     // Quick Stats (Client only)

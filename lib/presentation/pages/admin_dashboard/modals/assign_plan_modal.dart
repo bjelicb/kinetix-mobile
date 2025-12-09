@@ -93,6 +93,8 @@ Future<void> showAssignPlanModal({
   DateTime? selectedStartDate;
   final searchController = TextEditingController();
 
+  if (!context.mounted) return;
+  
   await showModalBottomSheet(
     context: context,
     backgroundColor: AppColors.surface,
@@ -100,12 +102,16 @@ Future<void> showAssignPlanModal({
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: StatefulBuilder(
-        builder: (context, setModalState) {
+    builder: (context) {
+      final mediaQuery = MediaQuery.maybeOf(context);
+      final bottomPadding = mediaQuery?.viewInsets.bottom ?? 0.0;
+      
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: bottomPadding,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setModalState) {
           // Log current state when builder is called
           developer.log('AssignPlanModal: Builder called - selectedClients: ${selectedClients.length}, assignedUserIds: ${assignedUserIds.length}', name: 'AssignPlanModal');
           
@@ -395,13 +401,85 @@ Future<void> showAssignPlanModal({
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
-                                  backgroundColor: AppColors.error,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
+                              String errorMessage = 'Failed to assign plan';
+                              String errorDetails = e.toString();
+                              
+                              // Parse error message for better UX
+                              // Backend throws: "Client cannot be assigned a new plan. Current week must be completed first..."
+                              if (errorDetails.contains('cannot unlock next week') || 
+                                  errorDetails.contains('Current week must be completed') ||
+                                  errorDetails.contains('cannot be assigned a new plan') ||
+                                  errorDetails.contains('must complete')) {
+                                errorMessage = '⚠️ Cannot Assign Plan\n\nOne or more selected clients must complete their current week\'s workouts before being assigned a new plan.\n\nPlease wait until the current week is completed or select different clients.';
+                              } else if (errorDetails.contains('Forbidden') || errorDetails.contains('403')) {
+                                errorMessage = 'Access denied. You don\'t have permission to assign this plan.';
+                              } else if (errorDetails.contains('not found') || errorDetails.contains('404')) {
+                                errorMessage = 'Plan or client not found.';
+                              } else if (errorDetails.contains('Exception:')) {
+                                errorMessage = errorDetails.split('Exception:').last.trim();
+                                if (errorMessage.isEmpty) {
+                                  errorMessage = 'An error occurred while assigning the plan.';
+                                }
+                              } else {
+                                // Try to extract message from error string
+                                errorMessage = errorDetails;
+                              }
+                              
+                              // Show dialog for unlock errors (more visible)
+                              if (errorMessage.contains('cannot unlock') || errorMessage.contains('must complete')) {
+                                showDialog(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Row(
+                                      children: [
+                                        Icon(Icons.warning_rounded, color: AppColors.warning),
+                                        SizedBox(width: 8),
+                                        Text('Cannot Assign Plan'),
+                                      ],
+                                    ),
+                                    content: Text(
+                                      errorMessage.replaceAll('⚠️ ', '').replaceAll('\n\n', '\n'),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dialogContext),
+                                        child: const Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '⚠️ Assignment Failed',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          errorMessage,
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: AppColors.warning,
+                                    duration: const Duration(seconds: 6),
+                                    action: SnackBarAction(
+                                      label: 'Dismiss',
+                                      textColor: AppColors.textPrimary,
+                                      onPressed: () {},
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           }
                         },
@@ -409,9 +487,10 @@ Future<void> showAssignPlanModal({
               ],
             ),
           );
-        },
-      ),
-    ),
+          },
+        ),
+      );
+    },
   );
 }
 

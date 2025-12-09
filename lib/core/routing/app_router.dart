@@ -16,6 +16,8 @@ import '../../presentation/pages/analytics_page.dart';
 import '../../presentation/pages/settings_page.dart';
 import '../../presentation/pages/workout_history_page.dart';
 import '../../presentation/pages/admin_dashboard_page.dart';
+import '../../presentation/pages/payment_page.dart';
+import '../../presentation/pages/weigh_in_page.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import '../../presentation/widgets/custom_bottom_nav.dart';
 import '../../core/theme/animations.dart';
@@ -101,13 +103,14 @@ GoRouter appRouter(AppRouterRef ref) {
       if (isAuthenticated) {
         final user = authState.valueOrNull;
         
-        // Allow access to check-in pages, login, splash, onboarding without check-in requirement
+        // Allow access to check-in pages, login, splash, onboarding, payment without check-in requirement
         final allowedRoutesWithoutCheckIn = [
           '/check-in',
           '/check-in/history',
           '/login',
           '/splash',
           '/onboarding',
+          '/payment',
         ];
         
         if (allowedRoutesWithoutCheckIn.contains(currentLocation)) {
@@ -426,6 +429,41 @@ GoRouter appRouter(AppRouterRef ref) {
               curve: AppAnimations.pageTransitionCurve,
             ));
             return SlideTransition(position: slideAnimation, child: child);
+          },
+          transitionDuration: AppAnimations.pageTransitionDuration,
+        ),
+      ),
+      GoRoute(
+        path: '/payment',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PaymentPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final slideAnimation = Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: AppAnimations.pageTransitionCurve,
+            ));
+            return SlideTransition(position: slideAnimation, child: child);
+          },
+          transitionDuration: AppAnimations.pageTransitionDuration,
+        ),
+      ),
+      GoRoute(
+        path: '/weigh-in',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const WeighInPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
+            );
+            return ScaleTransition(
+              scale: scaleAnimation,
+              child: FadeTransition(opacity: animation, child: child),
+            );
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
         ),

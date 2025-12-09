@@ -627,6 +627,75 @@ if (currentPlan != null) {
 
 ---
 
+## Running Tab Balance Display
+
+### Implementation Status: ✅ COMPLETE
+
+**UI Components:**
+- Created `BalanceCard` widget - Displays running tab balance and monthly balance
+- Shows "Pay Now" button when balance > 0
+- Displays warning message about monthly paywall
+
+**Integration:**
+- Added balance loading to `DashboardPage` on init
+- Fetches balance from `/gamification/status` endpoint
+- Shows loading state while fetching
+- Displays balance card only for CLIENT role
+
+**Debug Logging:**
+- Added debugPrint statements for balance loading and display
+
+---
+
+## Payment Page
+
+### Implementation Status: ✅ COMPLETE
+
+**UI:**
+- Created `PaymentPage` with balance summary
+- Shows payment history (penalty entries)
+- "Mark as Paid" button (clears balance - manual payment for Phase 1)
+- Placeholder for Stripe integration (Phase 2)
+
+**Route:**
+- Added `/payment` route to app router
+- Accessible without check-in requirement
+
+---
+
+## Check-in Gate for Workouts
+
+### Implementation Status: ✅ COMPLETE
+
+**Validation:**
+- `WorkoutRunnerPage` validates check-in before allowing workout start
+- Checks for today's check-in using `LocalDataSource.getTodayCheckIn()`
+- Blocks workout UI if no valid check-in exists
+- Redirects to check-in page with warning message
+
+**Debug Logging:**
+- Added debugPrint statements for check-in validation flow
+
+---
+
+## Monday Weigh-in Page
+
+### Implementation Status: ✅ COMPLETE
+
+**UI:**
+- Created `WeighInPage` with weight input
+- Monday validation (shows warning if not Monday)
+- Optional camera support for scale photos
+- Submits weigh-in via `/checkins/weigh-in` endpoint
+
+**Route:**
+- Added `/weigh-in` route to app router
+
+**API Integration:**
+- Added `createWeighIn()`, `getWeighInHistory()`, `getLatestWeighIn()` methods to `RemoteDataSource`
+
+---
+
 ## 🔗 **VEZE:**
 
 - **Status:** `docs/MOBILE_STATUS.md`

@@ -39,6 +39,14 @@ Future<Plan?> currentPlan(CurrentPlanRef ref) async {
   
   print('[PlanController] → User ID: ${user.id}');
   print('[PlanController] → User role: ${user.role}');
+  
+  // Admin and Trainer don't have "current plan" - only CLIENT does
+  if (user.role != 'CLIENT') {
+    print('[PlanController] → User is ${user.role} - skipping getCurrentPlan (only for CLIENT)');
+    print('═══════════════════════════════════════════════════════════');
+    return null;
+  }
+  
   print('[PlanController] → Getting plan repository...');
   
   // Use read() instead of watch() to avoid rebuild loops
@@ -57,10 +65,10 @@ Future<Plan?> currentPlan(CurrentPlanRef ref) async {
     print('═══════════════════════════════════════════════════════════');
     return result;
   } catch (e, stackTrace) {
-    print('[PlanController] ✗✗✗ ERROR in getCurrentPlan: $e');
-    print('[PlanController] Stack trace: $stackTrace');
+    // Silently handle errors for non-CLIENT roles
+    print('[PlanController] ✗ Error in getCurrentPlan (silently handled): $e');
     print('═══════════════════════════════════════════════════════════');
-    rethrow;
+    return null; // Return null instead of rethrowing
   }
 }
 

@@ -11,9 +11,11 @@ import '../../presentation/widgets/custom_numpad.dart';
 import '../../presentation/widgets/rpe_picker.dart';
 import '../../presentation/widgets/empty_state.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
+import '../../presentation/widgets/gradient_card.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/entities/exercise.dart';
+import '../../data/datasources/local_data_source.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 
@@ -45,11 +47,59 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _exerciseKeys = {};
 
+  bool _hasValidCheckIn = false;
+  bool _checkingCheckIn = true;
+
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _startTimer();
+    _checkCheckInStatus();
+  }
+
+  Future<void> _checkCheckInStatus() async {
+    debugPrint('[WorkoutRunnerPage] _checkCheckInStatus START');
+    try {
+      final localDataSource = LocalDataSource();
+      debugPrint('[WorkoutRunnerPage] Checking for today\'s check-in...');
+      final todayCheckIn = await localDataSource.getTodayCheckIn();
+      
+      debugPrint('[WorkoutRunnerPage] Today check-in result: ${todayCheckIn != null ? "FOUND" : "NOT FOUND"}');
+      if (todayCheckIn != null) {
+        debugPrint('[WorkoutRunnerPage] Check-in ID: ${todayCheckIn.id}, Timestamp: ${todayCheckIn.timestamp}');
+      }
+      
+      setState(() {
+        _hasValidCheckIn = todayCheckIn != null;
+        _checkingCheckIn = false;
+      });
+
+      debugPrint('[WorkoutRunnerPage] Check-in status: ${_hasValidCheckIn ? "VALID" : "INVALID"}');
+
+      // If no check-in, redirect to check-in page
+      if (!_hasValidCheckIn && mounted) {
+        debugPrint('[WorkoutRunnerPage] No valid check-in, redirecting to check-in page');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You must check in before starting a workout'),
+              backgroundColor: AppColors.warning,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          context.go('/check-in');
+        });
+      } else {
+        debugPrint('[WorkoutRunnerPage] Valid check-in found, allowing workout');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[WorkoutRunnerPage] Error checking check-in status: $e');
+      debugPrint('[WorkoutRunnerPage] Stack trace: $stackTrace');
+      setState(() {
+        _checkingCheckIn = false;
+      });
+    }
   }
 
   void _startTimer() {
@@ -440,6 +490,69 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   @override
   Widget build(BuildContext context) {
     final workoutsState = ref.watch(workoutControllerProvider);
+    
+    // Show loading if checking check-in status
+    if (_checkingCheckIn) {
+      return GradientBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: const Center(
+            child: ShimmerCard(height: 200),
+          ),
+        ),
+      );
+    }
+
+    // Show message if no valid check-in
+    if (!_hasValidCheckIn) {
+      return GradientBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('Check-In Required'),
+            backgroundColor: Colors.transparent,
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.camera_alt_rounded,
+                    size: 64,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Check-In Required',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'You must check in with GPS and photo before starting a workout.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  NeonButton(
+                    text: 'Go to Check-In',
+                    icon: Icons.camera_alt_rounded,
+                    onPressed: () {
+                      context.go('/check-in');
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     
     return GradientBackground(
       child: Scaffold(

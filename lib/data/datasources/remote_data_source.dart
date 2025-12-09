@@ -547,6 +547,123 @@ class RemoteDataSource {
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }
+
+  Future<Map<String, dynamic>> getBalance() async {
+    try {
+      developer.log('getBalance() calling ${ApiConstants.gamificationBalance}', name: 'RemoteDataSource');
+      final response = await _dio.get(ApiConstants.gamificationBalance);
+      developer.log('getBalance() response status: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('getBalance() response data: ${response.data}', name: 'RemoteDataSource');
+      
+      // TransformInterceptor wraps all responses in { success: true, data: ... }
+      if (response.data is Map && response.data['success'] == true && response.data['data'] != null) {
+        developer.log('getBalance() response is wrapped, extracting data', name: 'RemoteDataSource');
+        final data = response.data['data'];
+        developer.log('getBalance() extracted data: $data', name: 'RemoteDataSource');
+        return data;
+      }
+      
+      // Fallback: if not wrapped, return directly (shouldn't happen with TransformInterceptor)
+      developer.log('getBalance() WARNING: response not wrapped, returning directly', name: 'RemoteDataSource');
+      return response.data;
+    } on DioException catch (e) {
+      developer.log('getBalance() error: ${e.message}', name: 'RemoteDataSource');
+      developer.log('getBalance() error response: ${e.response?.data}', name: 'RemoteDataSource');
+      throw Exception(e.response?.data['message'] ?? 'Failed to get balance');
+    }
+  }
+
+  Future<void> clearBalance() async {
+    try {
+      await _dio.post(ApiConstants.gamificationClearBalance);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to clear balance');
+    }
+  }
+
+  // Weigh-in Methods
+  Future<Map<String, dynamic>> createWeighIn({
+    required double weight,
+    DateTime? date,
+    String? photoUrl,
+    String? notes,
+    String? planId,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'weight': weight,
+        'date': date?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      };
+      if (photoUrl != null) data['photoUrl'] = photoUrl;
+      if (notes != null) data['notes'] = notes;
+      if (planId != null) data['planId'] = planId;
+
+      final response = await _dio.post('/checkins/weigh-in', data: data);
+      
+      // Handle TransformInterceptor wrapper
+      if (response.data is Map && response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'];
+      }
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to create weigh-in');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getWeighInHistory() async {
+    try {
+      final response = await _dio.get('/checkins/weigh-in/history');
+      return List<Map<String, dynamic>>.from(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to get weigh-in history');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getLatestWeighIn() async {
+    try {
+      developer.log('getLatestWeighIn() calling /checkins/weigh-in/latest', name: 'RemoteDataSource');
+      final response = await _dio.get('/checkins/weigh-in/latest');
+      developer.log('getLatestWeighIn() response status: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('getLatestWeighIn() response data: ${response.data}', name: 'RemoteDataSource');
+      
+      // TransformInterceptor wraps all responses in { success: true, data: ... }
+      // But this endpoint might return null if no weigh-in exists (404)
+      if (response.statusCode == 404) {
+        developer.log('getLatestWeighIn() - No weigh-in found (404)', name: 'RemoteDataSource');
+        return null;
+      }
+      
+      // TransformInterceptor wraps all responses in { success: true, data: ... }
+      if (response.data is Map && response.data['success'] == true) {
+        final data = response.data['data'];
+        if (data == null) {
+          developer.log('getLatestWeighIn() - No weigh-in data (data is null)', name: 'RemoteDataSource');
+          return null;
+        }
+        developer.log('getLatestWeighIn() response is wrapped, extracting data', name: 'RemoteDataSource');
+        developer.log('getLatestWeighIn() extracted data: $data', name: 'RemoteDataSource');
+        return data as Map<String, dynamic>?;
+      }
+      
+      // If data is null (no weigh-in), return null
+      if (response.data == null) {
+        developer.log('getLatestWeighIn() - No weigh-in data (response.data is null)', name: 'RemoteDataSource');
+        return null;
+      }
+      
+      // Fallback: return directly if not wrapped
+      developer.log('getLatestWeighIn() returning response.data directly', name: 'RemoteDataSource');
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        developer.log('getLatestWeighIn() - 404 Not Found (no weigh-in exists)', name: 'RemoteDataSource');
+        return null; // No weigh-in is not an error
+      }
+      developer.log('getLatestWeighIn() error: ${e.message}', name: 'RemoteDataSource');
+      developer.log('getLatestWeighIn() error response: ${e.response?.data}', name: 'RemoteDataSource');
+      throw Exception(e.response?.data['message'] ?? 'Failed to get latest weigh-in');
+    }
+  }
   
   // Trainer Methods
   Future<Map<String, dynamic>> getTrainerClients() async {

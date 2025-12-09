@@ -14,6 +14,7 @@ Future<void> showCreatePlanModal({
 }) async {
   final nameController = TextEditingController();
   final descriptionController = TextEditingController();
+  final weeklyCostController = TextEditingController(text: '0');
   String? selectedDifficulty;
   String? selectedTrainerId;
 
@@ -106,6 +107,26 @@ Future<void> showCreatePlanModal({
                       });
                     },
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: weeklyCostController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Weekly Cost (€)',
+                      hintText: '0.00',
+                      prefixText: '€ ',
+                      filled: true,
+                      fillColor: AppColors.surface1,
+                      helperText: 'Cost per week for Running Tab system\nYou can enter: 7, 7.00, 25.50, etc.',
+                      errorText: weeklyCostController.text.isNotEmpty && 
+                                 double.tryParse(weeklyCostController.text.trim()) == null
+                          ? 'Invalid format. Use numbers only (e.g., 7, 7.00, 25.50)'
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      setState(() {});
+                    },
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   NeonButton(
                     text: 'Create Plan',
@@ -126,6 +147,46 @@ Future<void> showCreatePlanModal({
                               if (selectedDifficulty != null) {
                                 planData['difficulty'] = selectedDifficulty;
                               }
+                              
+                              // Validate weekly cost format
+                              final weeklyCostText = weeklyCostController.text.trim();
+                              double? weeklyCost;
+                              
+                              if (weeklyCostText.isNotEmpty) {
+                                // Try parsing as double (supports both "7" and "7.50")
+                                weeklyCost = double.tryParse(weeklyCostText);
+                                if (weeklyCost == null) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('Invalid format. Please enter a number (e.g., 25.50 or 25)'),
+                                        backgroundColor: AppColors.warning,
+                                        duration: const Duration(seconds: 4),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                if (weeklyCost < 0) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('Weekly cost cannot be negative'),
+                                        backgroundColor: AppColors.warning,
+                                        duration: const Duration(seconds: 4),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                if (weeklyCost > 0) {
+                                  planData['weeklyCost'] = weeklyCost;
+                                }
+                              } else {
+                                // Empty means 0
+                                planData['weeklyCost'] = 0.0;
+                              }
+                              
                               planData['isTemplate'] = false;
 
                               await ref.read(adminControllerProvider.notifier).createPlan(planData);

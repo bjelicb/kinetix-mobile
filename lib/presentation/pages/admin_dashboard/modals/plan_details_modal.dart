@@ -95,6 +95,11 @@ Future<void> showPlanDetailsModal({
                   ),
                   const SizedBox(height: 8),
                   PlanDetailItem(
+                    label: 'Weekly Cost',
+                    value: '€${(planData['weeklyCost'] ?? 0).toStringAsFixed(2)}',
+                  ),
+                  const SizedBox(height: 8),
+                  PlanDetailItem(
                     label: 'Assigned Clients',
                     value: '${planData['assignedClientCount'] ?? planData['assignedClientIds']?.length ?? 0}',
                   ),

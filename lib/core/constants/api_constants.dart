@@ -56,6 +56,8 @@ class ApiConstants {
   
   // Gamification Endpoints
   static const String gamificationStatus = '/gamification/status';
+  static const String gamificationBalance = '/gamification/balance';
+  static const String gamificationClearBalance = '/gamification/clear-balance';
   
   // Admin Endpoints
   static const String adminUsers = '/admin/users';

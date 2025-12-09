@@ -17,6 +17,9 @@ Future<void> showEditPlanModal({
 
   final nameController = TextEditingController(text: plan['name']?.toString() ?? '');
   final descriptionController = TextEditingController(text: plan['description']?.toString() ?? '');
+  final weeklyCostController = TextEditingController(
+    text: (plan['weeklyCost'] ?? 0).toString(),
+  );
   String? selectedDifficulty = plan['difficulty']?.toString();
 
   await showModalBottomSheet(
@@ -90,6 +93,26 @@ Future<void> showEditPlanModal({
                         });
                       },
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: weeklyCostController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: 'Weekly Cost (€)',
+                        hintText: '0.00',
+                        prefixText: '€ ',
+                        filled: true,
+                        fillColor: AppColors.surface1,
+                        helperText: 'Cost per week for Running Tab system\nYou can enter: 7, 7.00, 25.50, etc.',
+                        errorText: weeklyCostController.text.isNotEmpty && 
+                                   double.tryParse(weeklyCostController.text.trim()) == null
+                            ? 'Invalid format. Use numbers only (e.g., 7, 7.00, 25.50)'
+                            : null,
+                      ),
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                    ),
                     const SizedBox(height: AppSpacing.lg),
                     NeonButton(
                       text: 'Update Plan',
@@ -103,6 +126,41 @@ Future<void> showEditPlanModal({
                               developer.log('EditPlanModal: difficulty=$selectedDifficulty', name: 'EditPlanModal');
                               
                               try {
+                                // Validate weekly cost format
+                                final weeklyCostText = weeklyCostController.text.trim();
+                                double? weeklyCost;
+                                
+                                if (weeklyCostText.isNotEmpty) {
+                                  // Try parsing as double (supports both "7" and "7.50")
+                                  weeklyCost = double.tryParse(weeklyCostText);
+                                  if (weeklyCost == null) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Invalid format. Please enter a number (e.g., 25.50 or 25)'),
+                                          backgroundColor: AppColors.warning,
+                                          duration: const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  if (weeklyCost < 0) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Weekly cost cannot be negative'),
+                                          backgroundColor: AppColors.warning,
+                                          duration: const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                } else {
+                                  weeklyCost = 0.0;
+                                }
+                                
                                 final planData = <String, dynamic>{
                                   'name': nameController.text.trim(),
                                   'description': descriptionController.text.trim().isEmpty
@@ -112,6 +170,9 @@ Future<void> showEditPlanModal({
                                 if (selectedDifficulty != null) {
                                   planData['difficulty'] = selectedDifficulty;
                                 }
+                                planData['weeklyCost'] = weeklyCost;
+                                
+                                developer.log('EditPlanModal: weeklyCost parsed: $weeklyCost (from input: "$weeklyCostText")', name: 'EditPlanModal');
 
                                 developer.log('EditPlanModal: Calling updatePlan with data: $planData', name: 'EditPlanModal');
                                 await ref.read(adminControllerProvider.notifier).updatePlan(planId, planData);

@@ -7,6 +7,8 @@
 
 > **FOKUS:** Poboljšanja sync mehanizma i admin dashboard funkcionalnosti.
 
+> **NAPOMENA:** Balance Display, Payment Page, Check-in Gate i Weigh-in Page su implementirani u V1. V2 se fokusira na sync improvements i admin dashboard.
+
 ---
 
 ## ⚠️ **KRITIČNA PRAVILA - MORA SE POŠTOVATI:**

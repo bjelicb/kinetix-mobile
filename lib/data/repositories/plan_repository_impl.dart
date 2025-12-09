@@ -63,8 +63,13 @@ class PlanRepositoryImpl implements PlanRepository {
           
           debugPrint('[PlanRepository] ✗ No active plan found on server');
         } catch (e, stackTrace) {
-          debugPrint('[PlanRepository] ✗ Error fetching current plan from server: $e');
-          debugPrint('[PlanRepository] Stack trace: $stackTrace');
+          // Silently handle 403 Forbidden (expected for ADMIN/TRAINER roles)
+          final errorString = e.toString();
+          if (errorString.contains('403') || errorString.contains('Forbidden')) {
+            debugPrint('[PlanRepository] → 403 Forbidden (expected for non-CLIENT roles) - skipping');
+          } else {
+            debugPrint('[PlanRepository] ✗ Error fetching current plan from server: $e');
+          }
           // Fall through to local database
         }
       } else {
@@ -123,22 +128,30 @@ class PlanRepositoryImpl implements PlanRepository {
             planDto = await _remoteDataSource.getPlanById(planId);
             debugPrint('[PlanRepository] → Plan received from getPlanById endpoint');
           } catch (e) {
-            debugPrint('[PlanRepository] → getPlanById failed (may be CLIENT role): $e');
-            debugPrint('[PlanRepository] → Trying getCurrentPlan as fallback...');
-            // If getPlanById fails (likely 403 Forbidden for CLIENT), try getCurrentPlan
-            try {
-              final currentPlanDto = await _remoteDataSource.getCurrentPlan();
-              if (currentPlanDto.isNotEmpty) {
-                final currentPlanId = currentPlanDto['_id']?.toString() ?? currentPlanDto['id']?.toString();
-                if (currentPlanId == planId) {
-                  debugPrint('[PlanRepository] → Current plan ID matches requested plan ID');
-                  planDto = currentPlanDto;
-                } else {
-                  debugPrint('[PlanRepository] → Current plan ID ($currentPlanId) does not match requested ($planId)');
+            final errorString = e.toString();
+            if (errorString.contains('403') || errorString.contains('Forbidden')) {
+              debugPrint('[PlanRepository] → 403 Forbidden (expected for non-CLIENT roles) - skipping getCurrentPlan fallback');
+            } else {
+              debugPrint('[PlanRepository] → getPlanById failed (may be CLIENT role): $e');
+              debugPrint('[PlanRepository] → Trying getCurrentPlan as fallback...');
+              // If getPlanById fails (likely 403 Forbidden for CLIENT), try getCurrentPlan
+              try {
+                final currentPlanDto = await _remoteDataSource.getCurrentPlan();
+                if (currentPlanDto.isNotEmpty) {
+                  final currentPlanId = currentPlanDto['_id']?.toString() ?? currentPlanDto['id']?.toString();
+                  if (currentPlanId == planId) {
+                    debugPrint('[PlanRepository] → Current plan ID matches requested plan ID');
+                    planDto = currentPlanDto;
+                  } else {
+                    debugPrint('[PlanRepository] → Current plan ID ($currentPlanId) does not match requested ($planId)');
+                  }
+                }
+              } catch (currentPlanError) {
+                final currentPlanErrorString = currentPlanError.toString();
+                if (!currentPlanErrorString.contains('403') && !currentPlanErrorString.contains('Forbidden')) {
+                  debugPrint('[PlanRepository] → getCurrentPlan also failed: $currentPlanError');
                 }
               }
-            } catch (currentPlanError) {
-              debugPrint('[PlanRepository] → getCurrentPlan also failed: $currentPlanError');
             }
           }
           
