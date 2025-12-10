@@ -41,6 +41,9 @@ class ApiConstants {
   
   // Check-in Endpoints
   static const String checkIns = '/checkins';
+  static String checkInsByDateRange(String startDate, String endDate) => 
+      '/checkins/range/start/$startDate/end/$endDate';
+  static String checkInDelete(String checkInId) => '/checkins/$checkInId';
   
   // Workout Endpoints
   static const String workoutsToday = '/workouts/today';
@@ -58,6 +61,8 @@ class ApiConstants {
   static const String gamificationStatus = '/gamification/status';
   static const String gamificationBalance = '/gamification/balance';
   static const String gamificationClearBalance = '/gamification/clear-balance';
+  static String gamificationMessages(String clientId) => '/gamification/messages/$clientId';
+  static String gamificationMarkMessageRead(String messageId) => '/gamification/messages/$messageId/read';
   
   // Admin Endpoints
   static const String adminUsers = '/admin/users';
@@ -79,6 +84,8 @@ class ApiConstants {
   static String planDelete(String planId) => '/plans/$planId';
   static String planAssign(String planId) => '/plans/$planId/assign';
   static String planDuplicate(String planId) => '/plans/$planId/duplicate';
+  static String planCanUnlockNextWeek(String clientId) => '/plans/unlock-next-week/$clientId';
+  static String planRequestNextWeek(String clientId) => '/plans/request-next-week/$clientId';
   
   // Headers
   static const String authorizationHeader = 'Authorization';

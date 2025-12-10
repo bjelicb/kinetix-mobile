@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart' show AppColors, AppSpacing;
 import '../../../../domain/entities/user.dart';
-import '../../../controllers/admin_controller.dart';
 import '../../../widgets/neon_button.dart';
+import '../plan_builder_page.dart';
 
 Future<void> showCreatePlanModal({
   required BuildContext context,
@@ -17,6 +17,9 @@ Future<void> showCreatePlanModal({
   final weeklyCostController = TextEditingController(text: '0');
   String? selectedDifficulty;
   String? selectedTrainerId;
+
+  // Save root context before showing modal
+  final rootContext = Navigator.of(context, rootNavigator: true).context;
 
   await showModalBottomSheet(
     context: context,
@@ -47,6 +50,7 @@ Future<void> showCreatePlanModal({
                 children: [
                   // Trainer Selection (Required)
                   DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
                     value: selectedTrainerId,
                     decoration: const InputDecoration(
                       labelText: 'Trainer *',
@@ -89,6 +93,7 @@ Future<void> showCreatePlanModal({
                   ),
                   const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
                     value: selectedDifficulty,
                     decoration: const InputDecoration(
                       labelText: 'Difficulty',
@@ -129,87 +134,84 @@ Future<void> showCreatePlanModal({
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   NeonButton(
-                    text: 'Create Plan',
-                    icon: Icons.add_rounded,
+                    text: 'Continue to Plan Builder',
+                    icon: Icons.arrow_forward_rounded,
                     onPressed: (nameController.text.trim().isEmpty || selectedTrainerId == null)
                         ? null
                         : () async {
-                            try {
-                              final planData = <String, dynamic>{
-                                'name': nameController.text.trim(),
-                                'trainerId': selectedTrainerId,
-                              };
-
-                              final description = descriptionController.text.trim();
-                              if (description.isNotEmpty) {
-                                planData['description'] = description;
-                              }
-                              if (selectedDifficulty != null) {
-                                planData['difficulty'] = selectedDifficulty;
-                              }
-                              
-                              // Validate weekly cost format
-                              final weeklyCostText = weeklyCostController.text.trim();
-                              double? weeklyCost;
-                              
-                              if (weeklyCostText.isNotEmpty) {
-                                // Try parsing as double (supports both "7" and "7.50")
-                                weeklyCost = double.tryParse(weeklyCostText);
-                                if (weeklyCost == null) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('Invalid format. Please enter a number (e.g., 25.50 or 25)'),
-                                        backgroundColor: AppColors.warning,
-                                        duration: const Duration(seconds: 4),
-                                      ),
-                                    );
-                                  }
-                                  return;
+                            // Validate weekly cost format before navigating
+                            final weeklyCostText = weeklyCostController.text.trim();
+                            double? weeklyCost;
+                            
+                            if (weeklyCostText.isNotEmpty) {
+                              weeklyCost = double.tryParse(weeklyCostText);
+                              if (weeklyCost == null) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text('Invalid format. Please enter a number (e.g., 25.50 or 25)'),
+                                      backgroundColor: AppColors.warning,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
                                 }
-                                if (weeklyCost < 0) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('Weekly cost cannot be negative'),
-                                        backgroundColor: AppColors.warning,
-                                        duration: const Duration(seconds: 4),
-                                      ),
-                                    );
-                                  }
-                                  return;
+                                return;
+                              }
+                              if (weeklyCost < 0) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text('Weekly cost cannot be negative'),
+                                      backgroundColor: AppColors.warning,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
                                 }
-                                if (weeklyCost > 0) {
-                                  planData['weeklyCost'] = weeklyCost;
-                                }
-                              } else {
-                                // Empty means 0
-                                planData['weeklyCost'] = 0.0;
+                                return;
                               }
-                              
-                              planData['isTemplate'] = false;
-
-                              await ref.read(adminControllerProvider.notifier).createPlan(planData);
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                              await onCreated();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Plan created successfully'),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
+                            } else {
+                              weeklyCost = 0.0;
+                            }
+                            
+                            // Close modal first so context is clean
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            
+                            // Small delay to ensure modal is closed
+                            await Future.delayed(const Duration(milliseconds: 100));
+                            
+                            // Navigate to Plan Builder with pre-filled data (using root context)
+                            // Check if root context is still mounted after delay
+                            if (!rootContext.mounted) {
+                              debugPrint('[CreatePlanModal] Root context not mounted after delay');
+                              return;
+                            }
+                            final refresh = await Navigator.of(rootContext, rootNavigator: true).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => PlanBuilderPage(
+                                  existingPlan: null, // New plan
+                                  trainerId: selectedTrainerId!,
+                                  trainers: trainers,
+                                  initialName: nameController.text.trim(),
+                                  initialDescription: descriptionController.text.trim(),
+                                  initialDifficulty: selectedDifficulty,
+                                  initialWeeklyCost: weeklyCost,
+                                ),
+                              ),
+                            );
+                            
+                            // Refresh plan list if plan was created
+                            // Use root context to ensure we can still call the callback
+                            if (refresh == true) {
+                              debugPrint('[CreatePlanModal] Plan was created, calling onCreated callback');
+                              try {
+                                await onCreated();
+                                debugPrint('[CreatePlanModal] onCreated callback completed successfully');
+                              } catch (e) {
+                                debugPrint('[CreatePlanModal] Error in onCreated callback: $e');
                               }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
-                                    backgroundColor: AppColors.error,
-                                  ),
-                                );
-                              }
+                            } else {
+                              debugPrint('[CreatePlanModal] Plan was not created (refresh=$refresh)');
                             }
                           },
                   ),

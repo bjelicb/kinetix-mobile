@@ -1,0 +1,337 @@
+═══════════════════════════════════════════════════════════════
+  KINETIX MOBILE V2 - TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+📌 PRIJAVA KAO ADMIN
+   → Login sa admin kredencijalima
+   → Trebalo bi: Dashboard se učitava, vidiš Admin Dashboard
+
+───────────────────────────────────────────────────────────────
+
+1. CREATE & MANAGE PLANS ✅ (TESTIRANO)
+
+   1.1 CREATE NEW PLAN
+       ✅ Klik "Create" → Modal se otvara
+       ✅ Unesi: Name, Trainer, Description, Difficulty, Weekly Cost
+       ✅ Klik "Continue to Plan Builder"
+       ✅ Trebalo bi: Plan Builder se otvara sa unetim podacima
+       
+   1.2 PLAN BUILDER - DODAVANJE WORKOUT DAYS
+       ✅ Klik "+" da dodaš workout day
+       ✅ Unesi: Day name, markiraj Rest Day ako je potrebno
+       ✅ Dodaj Exercise: Ime, Sets, Reps, Rest
+       ✅ Search za exercise: Unesi slovo → Lista se filtrira, možeš nastaviti da kucaš
+       ✅ Trebalo bi: Exercise se dodaje, možeš dodati više exercises
+       
+   1.3 PLAN BUILDER - SAVE
+       ✅ Klik "Save Plan"
+       ✅ Trebalo bi: Plan se čuva, vraćaš se na dashboard
+       ✅ Trebalo bi: Plan se POJAVLJUJE u listi "Plan Manage" (bez reload)
+
+   1.4 EDIT PLAN (Template/Unassigned)
+       ✅ Klik na plan → Plan Details Modal
+       ✅ Klik "Edit" → Plan Builder se otvara sa podacima
+       ✅ Izmeni podatke → Save
+       ✅ Trebalo bi: Plan se update-uje, lista se refresh-uje
+
+   1.5 EDIT PLAN (Assigned to Clients)
+       ✅ Klik na plan sa assigned clients → Plan Details Modal
+       ✅ Klik "Edit" → Plan Builder se otvara
+       ✅ Pojavi se dialog: "Plan is assigned, cannot update directly"
+       ✅ Opcija 1: "Create New Plan" → Kreira se novi plan (Copy)
+       ✅ Opcija 2: "Update Anyway" → Update pokušaj → Fails → Dialog ponovo
+       ✅ Trebalo bi: Novi plan se kreira sa (Copy) u imenu, trainer i cost se kopiraju
+
+   1.6 DELETE PLAN
+       ✅ Klik "Delete" → Confirm dialog
+       ✅ Klik "Delete" → Plan se briše
+       ✅ Trebalo bi: Plan nestaje iz liste (bez reload)
+
+   1.7 DUPLICATE PLAN
+       ✅ Klik "Duplicate" → Confirm dialog
+       ✅ Klik "Duplicate" → Plan se duplira
+       ✅ Trebalo bi: Novi plan se pojavljuje u listi (bez reload)
+
+───────────────────────────────────────────────────────────────
+
+2. ASSIGN PLAN TO CLIENT ⚠️ (GLAVNI TEST)
+
+   2.1 ASSIGN PLAN - OSNOVNI FLOW
+       → Login kao ADMIN
+       → Admin Dashboard → "Plan Manage"
+       → Klik na plan koji želiš da assign-uješ
+       → Plan Details Modal se otvara
+       → Klik "Assign to Clients" dugme
+       → Trebalo bi: Assign Clients Modal se otvara
+
+   2.2 ASSIGN MODAL - SELECTION
+       → U modal-u vidiš listu svih CLIENT korisnika
+       → Checkbox za svakog klijenta
+       → Odaberi klijenta (npr. "John Doe")
+       → Unesi START DATE (npr. danas)
+       → Unesi END DATE (npr. +7 dana)
+       → Klik "Assign Plan"
+       → Trebalo bi: Loading indicator, zatim success poruka
+
+   2.3 POSLE ASSIGN-A - BACKEND PROVERA
+       → Plan se assign-ovao klijentu
+       → Backend LOG trebalo bi da pokazuje:
+          • "Adding clients to plan's assignedClientIds"
+          • "Generating workout logs for NEW clients only"
+          • "Auto-generate WorkoutLog placeholders for 7 days"
+
+   2.4 POSLE ASSIGN-A - DATABASE PROVERA
+       → MongoDB: plans collection
+       → Plan document → "assignedClientIds" → Sadrži client ID
+       → MongoDB: workoutlogs collection
+       → Trebalo bi: 7 workout log dokumenta za tog klijenta
+       → Svaki log trebalo bi da ima:
+          • clientId
+          • planId
+          • workoutDay (1-7)
+          • date (startDate + dan indexa)
+          • status: "PENDING" ili "SCHEDULED"
+
+   2.5 POSLE ASSIGN-A - CLIENT VIEW PROVERA
+       → LOGOUT iz admina
+       → LOGIN kao CLIENT (korisnik kome si assign-ovao plan)
+       → Trebalo bi: Dashboard se učitava kao CLIENT
+       → Trebalo bi: "Current Plan" card se prikazuje
+       → Trebalo bi: Plan name, trainer name, difficulty se vidi
+       → Trebalo bi: "Weekly Cost" se prikazuje (ako je setovan)
+
+   2.6 CLIENT VIEW - WORKOUT CALENDAR
+       → CLIENT Dashboard → Kalendar sekcija
+       → Trebalo bi: Vidljivi su workout days za sledećih 7 dana
+       → Trebalo bi: Svaki dan prikazuje:
+          • Day name (npr. "Legs")
+          • Date
+          • Status (Pending/Scheduled)
+          • Broj exercises
+
+   2.7 CLIENT VIEW - WORKOUT DAY DETAILS
+       → Klik na workout day u kalendaru
+       → Trebalo bi: Otvara se detalji workout-a
+       → Trebalo bi: Vidi se lista exercises:
+          • Exercise name
+          • Sets x Reps
+          • Rest time
+          • Notes (ako postoje)
+
+   2.8 CLIENT VIEW - WORKOUT RUNNER
+       → Klik "Start Workout" ili "View Workout"
+       → Trebalo bi: Workout Runner page se otvara
+       → Trebalo bi: Vidi se lista exercises za taj dan
+       → Trebalo bi: Možeš markirati exercise kao completed
+       → Trebalo bi: Možeš započeti workout
+
+───────────────────────────────────────────────────────────────
+
+3. CHECK-IN SYSTEM ⚠️ (VAŽNO ZA V2)
+
+   3.1 CHECK-IN - OSNOVNI FLOW
+       → Login kao CLIENT
+       → Dashboard → "Check In" sekcija
+       → Klik "Check In" dugme
+       → Trebalo bi: Check-in modal/page se otvara
+
+   3.2 CHECK-IN - PHOTO CAPTURE
+       → Klik "Take Photo" ili "Choose Photo"
+       → Trebalo bi: Camera/Gallery se otvara
+       → Odaberi ili slikaj foto
+       → Trebalo bi: Foto se prikazuje u preview-u
+
+   3.3 CHECK-IN - GPS LOCATION
+       → Klik "Check In"
+       → Trebalo bi: GPS location se traži automatski
+       → Trebalo bi: Location koordinate se čuvaju
+
+   3.4 CHECK-IN - SUBMIT
+       → Klik "Submit Check In"
+       → Trebalo bi: Loading indicator
+       → Trebalo bi: Success poruka
+       → Trebalo bi: Check-in se pojavljuje u istoriji
+
+   3.5 CHECK-IN - OFFLINE MODE
+       → Isključi internet/WiFi
+       → Uradi check-in
+       → Trebalo bi: Check-in se čuva lokalno u queue
+       → Uključi internet
+       → Trebalo bi: Sync manager automatski šalje queued check-ins
+
+───────────────────────────────────────────────────────────────
+
+4. AI MESSAGES (GAMIFICATION) ⚠️
+
+   4.1 AI MESSAGE - VIEW
+       → Login kao CLIENT
+       → Dashboard → "AI Messages" sekcija
+       → Trebalo bi: Vidiš AI poruke (ako postoje)
+       → Poruke trebalo bi da imaju tone (motivational, warning, etc.)
+
+   4.2 AI MESSAGE - TONE STYLING
+       → Motivational poruke → Zeleni accent
+       → Warning poruke → Žuti/Orange accent
+       → Celebration poruke → Zlatni accent
+       → Trebalo bi: Stilovi se prikazuju kako treba
+
+───────────────────────────────────────────────────────────────
+
+5. UNLOCK NEXT WEEK ⚠️
+
+   5.1 UNLOCK BUTTON - VISIBILITY
+       → Login kao CLIENT
+       → Dashboard → Plan sekcija
+       → Trebalo bi: "Unlock Next Week" dugme (ako je dostupno)
+       → Trebalo bi: Dugme je enabled samo kada je vreme (nakon 7 dana)
+
+   5.2 UNLOCK - REQUEST
+       → Klik "Unlock Next Week"
+       → Trebalo bi: Loading indicator
+       → Trebalo bi: Success poruka
+       → Trebalo bi: Sledeća nedelja workout days se unlock-uju
+
+───────────────────────────────────────────────────────────────
+
+6. PAYWALL SYSTEM ⚠️
+
+   6.1 PAYWALL - OUTSTANDING BALANCE
+       → Login kao CLIENT sa negativnim balance-om
+       → Trebalo bi: Paywall dialog se pojavljuje
+       → Trebalo bi: Ne možeš pristupiti workout-ima dok ne platiš
+
+   6.2 PAYWALL - PAYMENT
+       → U Paywall dialog-u → Unesi payment amount
+       → Klik "Pay"
+       → Trebalo bi: Balance se update-uje
+       → Trebalo bi: Paywall nestaje
+
+───────────────────────────────────────────────────────────────
+
+7. ADMIN - USER MANAGEMENT ⚠️
+
+   7.1 CREATE USER
+       → Admin Dashboard → "User Management"
+       → Klik "Create User"
+       → Unesi: Email, Password, Name, Role (TRAINER/CLIENT)
+       → Klik "Create"
+       → Trebalo bi: User se kreira, pojavljuje se u listi
+
+   7.2 EDIT USER
+       → Klik na user → User Details Modal
+       → Klik "Edit" → Edit Modal
+       → Izmeni podatke → Save
+       → Trebalo bi: User se update-uje
+
+   7.3 DELETE USER
+       → Klik "Delete" → Confirm
+       → Trebalo bi: User se briše iz sistema
+
+───────────────────────────────────────────────────────────────
+
+8. ADMIN - WORKOUT MANAGEMENT ⚠️
+
+   8.1 VIEW ALL WORKOUTS
+       → Admin Dashboard → "Workout Management"
+       → Trebalo bi: Lista svih workout logs
+       → Trebalo bi: Vidiš: Client name, Plan name, Date, Status
+
+   8.2 UPDATE WORKOUT STATUS
+       → Klik na workout → Workout Details Modal
+       → Klik "Mark as Completed" ili "Mark as Missed"
+       → Trebalo bi: Status se update-uje
+       → Trebalo bi: Client dashboard se update-uje
+
+   8.3 DELETE WORKOUT
+       → Klik "Delete" → Confirm
+       → Trebalo bi: Workout log se briše
+
+───────────────────────────────────────────────────────────────
+
+9. SYNC MECHANISM ⚠️ (CRITICAL)
+
+   9.1 SYNC - PUSH CHANGES
+       → Offline mode → Napravi neke izmene (check-in, workout completion)
+       → Online mode → Trebalo bi: Sync manager automatski push-uje izmene
+       → Trebalo bi: Backend prima izmene
+
+   9.2 SYNC - PULL CHANGES
+       → Online mode → Admin napravi izmene (assign plan, update workout)
+       → CLIENT app se sync-uje → Trebalo bi: CLIENT vidi najnovije izmene
+
+───────────────────────────────────────────────────────────────
+
+10. RESPONSIVE DESIGN ⚠️
+
+    10.1 MOBILE VIEW
+        → Otvori app na mobilnom telefonu
+        → Trebalo bi: Svi elementi se prikazuju kako treba
+        → Trebalo bi: Input fields su responsive
+        → Trebalo bi: Dropdown-i rade kako treba
+        → Trebalo bi: Exercise search radi bez focus loss
+
+    10.2 TABLET VIEW
+        → Otvori app na tabletu
+        → Trebalo bi: Layout se prilagođava screen size-u
+
+───────────────────────────────────────────────────────────────
+
+📝 NOTES & LOGS TO CHECK:
+
+   • Backend logs → Proveri da li se workout logs kreiraju pri assign
+   • Frontend logs → Proveri sync manager logs
+   • Database → Proveri workoutlogs collection posle assign-a
+   • Network tab → Proveri API calls (assign, create workout logs)
+
+═══════════════════════════════════════════════════════════════
+  CRITICAL ASSIGN TEST SCENARIOS
+═══════════════════════════════════════════════════════════════
+
+SCENARIO 1: ASSIGN PLAN → CHECK WORKOUT LOGS
+   1. Admin → Assign plan "Test Plan" klijentu "John Doe"
+   2. START DATE: Danas
+   3. END DATE: +7 dana
+   4. ✅ Proveri MongoDB: workoutlogs collection
+   → Trebalo bi: 7 novih workout log dokumenata
+   → Svaki sa: clientId, planId, workoutDay (1-7), date, status
+
+SCENARIO 2: CLIENT SEES ASSIGNED PLAN
+   1. Logout Admin → Login kao "John Doe" (CLIENT)
+   2. ✅ Dashboard → "Current Plan" card
+   → Trebalo bi: "Test Plan" se prikazuje
+   → Trebalo bi: Trainer name se prikazuje
+   → Trebalo bi: Weekly cost se prikazuje
+
+SCENARIO 3: CLIENT SEES WORKOUT CALENDAR
+   1. CLIENT Dashboard → Scroll do kalendara
+   → Trebalo bi: 7 workout days vidljivi
+   → Trebalo bi: Svaki dan ima correct date
+   → Trebalo bi: Rest days se prikazuju drugačije
+
+SCENARIO 4: CLIENT STARTS WORKOUT
+   1. CLIENT → Klik na workout day
+   → Trebalo bi: Workout details se otvaraju
+   → Trebalo bi: Exercises se prikazuju
+   2. Klik "Start Workout"
+   → Trebalo bi: Workout Runner se otvara
+   → Trebalo bi: Možeš markirati exercises kao completed
+
+═══════════════════════════════════════════════════════════════
+  TESTING ORDER (RECOMMENDED)
+═══════════════════════════════════════════════════════════════
+
+1. ✅ CREATE PLAN (već testirano - radi)
+2. ⚠️ ASSIGN PLAN TO CLIENT (GLAVNI TEST)
+3. ⚠️ CLIENT VIEW - Plan & Workouts
+4. ⚠️ CHECK-IN SYSTEM
+5. ⚠️ WORKOUT RUNNER
+6. ⚠️ AI MESSAGES
+7. ⚠️ UNLOCK NEXT WEEK
+8. ⚠️ PAYWALL
+9. ⚠️ SYNC MECHANISM
+10. ⚠️ RESPONSIVE DESIGN
+
+═══════════════════════════════════════════════════════════════
+  PRIORITY: START WITH ASSIGN TEST (#2)
+═══════════════════════════════════════════════════════════════
+

@@ -36,7 +36,7 @@ class WeighInCard extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: GradientCard(
-          child: Container(
+          child: SizedBox(
             height: 120,
             child: Center(
               child: CircularProgressIndicator(
@@ -53,7 +53,6 @@ class WeighInCard extends StatelessWidget {
     final weighInDate = hasWeighIn && latestWeighIn!['date'] != null
         ? DateTime.parse(latestWeighIn!['date'])
         : null;
-    final isMandatory = latestWeighIn?['isMandatory'] == true;
     final isWeightSpike = latestWeighIn?['isWeightSpike'] == true;
 
     return Padding(
@@ -125,7 +124,7 @@ class WeighInCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '${weight.toStringAsFixed(1)}',
+                              weight.toStringAsFixed(1),
                               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold,

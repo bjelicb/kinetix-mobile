@@ -47,17 +47,26 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   }
 
   Future<void> _loadPlans() async {
-    if (!mounted) return;
+    if (!mounted) {
+      debugPrint('[AdminDashboard] _loadPlans called but widget not mounted');
+      return;
+    }
+    debugPrint('[AdminDashboard] _loadPlans called - loading plans...');
     setState(() => _isLoadingPlans = true);
     try {
       final plans = await ref.read(adminControllerProvider.notifier).getAllPlans();
+      debugPrint('[AdminDashboard] _loadPlans - fetched ${plans.length} plans');
       if (mounted) {
         setState(() {
           _allPlans = plans;
           _isLoadingPlans = false;
         });
+        debugPrint('[AdminDashboard] _loadPlans - state updated with ${_allPlans.length} plans');
+      } else {
+        debugPrint('[AdminDashboard] _loadPlans - widget not mounted after fetch');
       }
     } catch (e) {
+      debugPrint('[AdminDashboard] _loadPlans - ERROR: $e');
       if (mounted) {
         setState(() => _isLoadingPlans = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -262,14 +271,27 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
                   PlanManagementCard(
                     isLoading: _isLoadingPlans,
                     plans: _allPlans,
-                    onCreatePlan: () => showCreatePlanModal(
-                      context: context,
-                      ref: ref,
-                      trainers: _trainers,
-                      onCreated: () async {
+                    onCreatePlan: () async {
+                      await showCreatePlanModal(
+                        context: context,
+                        ref: ref,
+                        trainers: _trainers,
+                        onCreated: () async {
+                          debugPrint('[AdminDashboard] onCreated callback called - refreshing plans...');
+                          if (mounted) {
+                            await _loadPlans();
+                            debugPrint('[AdminDashboard] Plans refreshed successfully');
+                          } else {
+                            debugPrint('[AdminDashboard] Widget not mounted, cannot refresh');
+                          }
+                        },
+                      );
+                      // Ensure plans are refreshed even if callback wasn't called
+                      debugPrint('[AdminDashboard] Modal closed, ensuring plans are loaded...');
+                      if (mounted) {
                         await _loadPlans();
-                      },
-                    ),
+                      }
+                    },
                     onPlanTap: (plan) => showPlanDetailsModal(
                       context: context,
                       ref: ref,

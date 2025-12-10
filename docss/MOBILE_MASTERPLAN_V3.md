@@ -173,6 +173,115 @@ final remoteDataSourceProvider = Provider<RemoteDataSource>((ref) {
 
 ---
 
+### **3.8 Video Player Integration** 🟢
+
+**Zadatak:**
+Video playback za exercise tutorials
+
+**Zahtevi:**
+- [ ] Video player widget (video_player package)
+- [ ] Fullscreen mode
+- [ ] Playback controls (play, pause, seek, volume)
+- [ ] Thumbnail preview (pre load)
+- [ ] Integration u Workout Runner page
+- [ ] Integration u Exercise Details (Plan Details page)
+- [ ] Loading state dok video se učitava
+- [ ] Error handling (video ne može da se učita)
+- [ ] Auto-play on tap (opciono)
+- [ ] Video caching (cache downloaded videos)
+
+**Fajlovi:**
+- `lib/presentation/widgets/video_player_widget.dart` - **NOVO**
+- `lib/presentation/pages/workout_runner_page.dart` - **IZMENA**
+- `lib/presentation/pages/plan_details_page.dart` - **IZMENA**
+- `lib/presentation/widgets/exercise_video_player.dart` - **NOVO**
+
+**Implementacija:**
+
+```dart
+// video_player_widget.dart
+class VideoPlayerWidget extends StatefulWidget {
+  final String videoUrl;
+  final bool autoPlay;
+  final bool showControls;
+  
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _initializeVideo(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return Container(
+            height: 200,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, color: AppColors.error),
+                  SizedBox(height: 8),
+                  Text('Video unavailable', style: TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        return GestureDetector(
+          onTap: () => _toggleFullscreen(context),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: VideoPlayer(_controller),
+          ),
+        );
+      },
+    );
+  }
+  
+  Future<void> _toggleFullscreen(BuildContext context) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FullscreenVideoPlayer(videoUrl: videoUrl),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+}
+
+// workout_runner_page.dart
+Widget _buildExerciseVideo(Exercise exercise) {
+  if (exercise.videoUrl == null || exercise.videoUrl!.isEmpty) {
+    return SizedBox.shrink();
+  }
+  
+  return Padding(
+    padding: EdgeInsets.only(bottom: 16),
+    child: VideoPlayerWidget(
+      videoUrl: exercise.videoUrl!,
+      autoPlay: false,
+      showControls: true,
+    ),
+  );
+}
+```
+
+**Testovi:**
+- [ ] Test video player initialization
+- [ ] Test fullscreen mode
+- [ ] Test playback controls
+- [ ] Test error handling
+- [ ] Test video caching
+- [ ] Test integration u Workout Runner
+
+---
+
 ## ✅ **CHECKLIST:**
 
 - [ ] Offline mode UX poboljšan
@@ -182,6 +291,13 @@ final remoteDataSourceProvider = Provider<RemoteDataSource>((ref) {
 - [ ] **Plan history visualization implementirana**
 - [ ] **Sync conflict logging implementirana**
 - [ ] **Demo/Presentation mode implementiran (mock data, offline prezentacija)**
+- [ ] **Video Player Integration implementirana**
+  - [ ] Video player widget
+  - [ ] Fullscreen mode
+  - [ ] Playback controls
+  - [ ] Integration u Workout Runner
+  - [ ] Integration u Plan Details
+  - [ ] Error handling
 
 ---
 

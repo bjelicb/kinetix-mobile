@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -202,6 +201,7 @@ Future<void> showWorkoutDetailsModal({
             
             if (confirmed == true) {
               // Get root navigator BEFORE closing modal
+              if (!context.mounted) return;
               final rootNavigator = Navigator.of(context, rootNavigator: true);
               
               // Close details modal first
@@ -210,6 +210,7 @@ Future<void> showWorkoutDetailsModal({
               debugPrint('[WorkoutDetailsModal] Starting delete process for workout: $workoutId');
               
               // Show loading dialog using root navigator context
+              if (!context.mounted) return;
               final loadingContext = rootNavigator.context;
               showDialog(
                 context: loadingContext,

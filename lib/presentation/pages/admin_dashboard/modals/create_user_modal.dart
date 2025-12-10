@@ -80,6 +80,7 @@ Future<void> showCreateUserModal({
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
                   value: selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Role',

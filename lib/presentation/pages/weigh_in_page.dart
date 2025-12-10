@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../data/datasources/remote_data_source.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
-import '../../presentation/widgets/shimmer_loader.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 
@@ -21,10 +19,8 @@ class WeighInPage extends StatefulWidget {
 class _WeighInPageState extends State<WeighInPage> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
   bool _isMonday = false;
   bool _processing = false;
-  Map<String, dynamic>? _latestWeighIn;
 
   @override
   void initState() {
@@ -50,7 +46,6 @@ class _WeighInPageState extends State<WeighInPage> {
       final remoteDataSource = RemoteDataSource(dio, storage);
       final latest = await remoteDataSource.getLatestWeighIn();
       setState(() {
-        _latestWeighIn = latest;
         if (latest != null) {
           _weightController.text = latest['weight'].toString();
           _notesController.text = latest['notes'] ?? '';

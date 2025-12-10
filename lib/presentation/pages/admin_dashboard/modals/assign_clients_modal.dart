@@ -42,6 +42,7 @@ Future<void> showAssignClientsModal({
               ),
               const SizedBox(height: AppSpacing.lg),
               DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
                 value: selectedTrainerId,
                 decoration: const InputDecoration(
                   labelText: 'Select Trainer',

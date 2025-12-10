@@ -9,8 +9,37 @@ import '../data/models/checkin_collection.dart' if (dart.library.html) '../data/
 import '../data/mappers/plan_mapper.dart';
 import 'cloudinary_upload_service.dart';
 
+/// Error types for categorization
+enum SyncErrorType {
+  network,
+  auth,
+  server,
+  validation,
+  unknown,
+}
+
+/// Sync result with partial success tracking
+class SyncResult {
+  final int successCount;
+  final int failedCount;
+  final int totalCount;
+  final List<String> errors;
+  
+  SyncResult({
+    required this.successCount,
+    required this.failedCount,
+    required this.totalCount,
+    required this.errors,
+  });
+  
+  bool get hasPartialSuccess => successCount > 0 && failedCount > 0;
+  bool get isFullSuccess => successCount == totalCount && failedCount == 0;
+  bool get isFullFailure => successCount == 0 && failedCount > 0;
+}
+
 class SyncManager {
   static const int _maxPullRetries = 3;
+  static const int _maxPushRetries = 3;
   static const Duration _initialRetryDelay = Duration(seconds: 1);
   
   final LocalDataSource _localDataSource;
@@ -20,20 +49,117 @@ class SyncManager {
   SyncManager(this._localDataSource, this._remoteDataSource)
       : _cloudinaryService = CloudinaryUploadService(_remoteDataSource);
   
+  /// Categorize error type for better handling
+  SyncErrorType _categorizeError(dynamic error) {
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return SyncErrorType.network;
+      }
+      
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        return SyncErrorType.auth;
+      }
+      
+      if (statusCode != null && statusCode >= 500) {
+        return SyncErrorType.server;
+      }
+      
+      if (statusCode == 400 || statusCode == 422) {
+        return SyncErrorType.validation;
+      }
+    }
+    
+    return SyncErrorType.unknown;
+  }
+  
+  /// Get user-friendly error message
+  String _getErrorMessage(dynamic error, SyncErrorType errorType) {
+    switch (errorType) {
+      case SyncErrorType.network:
+        return 'Network connection error. Please check your internet connection.';
+      case SyncErrorType.auth:
+        return 'Authentication error. Please log in again.';
+      case SyncErrorType.server:
+        return 'Server error. Please try again later.';
+      case SyncErrorType.validation:
+        return 'Invalid data. Please check your input.';
+      case SyncErrorType.unknown:
+        return 'An unexpected error occurred: ${error.toString()}';
+    }
+  }
+  
+  /// Retry operation with exponential backoff
+  /// Only retries network errors (not 401/403)
+  Future<T> _retryWithBackoff<T>({
+    required Future<T> Function() operation,
+    required String operationName,
+    int maxRetries = 3,
+  }) async {
+    int retryCount = 0;
+    
+    while (true) {
+      try {
+        return await operation();
+      } catch (e) {
+        final isNetworkError = e is DioException && (
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.connectionError
+        );
+        
+        final isAuthError = e is DioException && (
+          e.response?.statusCode == 401 ||
+          e.response?.statusCode == 403
+        );
+        
+        if (isAuthError) {
+          debugPrint('[SyncManager:Retry] Non-retryable error (${e.response?.statusCode}) - Skipping retry');
+          rethrow;
+        }
+        
+        if (!isNetworkError || retryCount >= maxRetries) {
+          if (retryCount >= maxRetries) {
+            debugPrint('[SyncManager:Retry] Max retries reached - Queuing for next launch');
+          }
+          rethrow;
+        }
+        
+        retryCount++;
+        final delay = _initialRetryDelay * (1 << (retryCount - 1)); // Exponential: 1s, 2s, 4s
+        
+        debugPrint('[SyncManager:Retry] $operationName failed - Attempt $retryCount/$maxRetries after ${delay.inSeconds}s delay');
+        debugPrint('[SyncManager:Retry] Network error - Retry scheduled');
+        
+        await Future.delayed(delay);
+      }
+    }
+  }
+  
   /// Main sync method - Media-First, then Push, then Pull
-  Future<void> sync() async {
+  Future<SyncResult?> sync() async {
     try {
       // Step 1: Media-First Sync (Check-ins)
       await _syncMedia();
       
       // Step 2: Push (Local -> Remote)
-      await _pushChanges();
+      final pushResult = await _pushChanges();
       
       // Step 3: Pull (Remote -> Local)
       await _pullChanges();
-    } catch (e) {
+      
+      return pushResult;
+    } catch (e, stackTrace) {
       // Log error but don't throw - sync happens in background
-      debugPrint('Sync error: $e');
+      final errorType = _categorizeError(e);
+      final errorMessage = _getErrorMessage(e, errorType);
+      debugPrint('[SyncManager:Error] Category: $errorType, Message: $errorMessage');
+      debugPrint('[SyncManager:Error] Stack trace: $stackTrace');
+      return null;
     }
   }
   
@@ -76,14 +202,20 @@ class SyncManager {
   }
   
   /// Step 2: Push dirty records to server
-  Future<void> _pushChanges() async {
+  Future<SyncResult> _pushChanges() async {
     final dirtyWorkouts = await _localDataSource.getDirtyWorkouts();
     final unsyncedCheckIns = await _localDataSource.getUnsyncedCheckIns();
     final dirtyPlans = await _localDataSource.getDirtyPlans();
     
-    if (dirtyWorkouts.isEmpty && unsyncedCheckIns.isEmpty && dirtyPlans.isEmpty) {
-      return; // Nothing to sync
+    final totalCount = dirtyWorkouts.length + unsyncedCheckIns.length + dirtyPlans.length;
+    
+    if (totalCount == 0) {
+      return SyncResult(successCount: 0, failedCount: 0, totalCount: 0, errors: []);
     }
+    
+    int successCount = 0;
+    int failedCount = 0;
+    final errors = <String>[];
     
     // Prepare batch data - convert workouts to API format
     final newLogs = <Map<String, dynamic>>[];
@@ -137,7 +269,7 @@ class SyncManager {
     }
     
     if (newLogs.isEmpty && newCheckIns.isEmpty && plansToPush.isEmpty) {
-      return; // Nothing to sync
+      return SyncResult(successCount: 0, failedCount: 0, totalCount: 0, errors: []); // Nothing to sync
     }
     
     final batchData = {
@@ -148,7 +280,12 @@ class SyncManager {
     };
     
     try {
-      await _remoteDataSource.syncBatch(batchData);
+      // Use retry logic for sync batch
+      await _retryWithBackoff(
+        operation: () => _remoteDataSource.syncBatch(batchData),
+        operationName: 'syncBatch',
+        maxRetries: _maxPushRetries,
+      );
       
       // Update local records based on server response
       // Mark as not dirty, update serverId if new, etc.
@@ -156,11 +293,13 @@ class SyncManager {
         workout.isDirty = false;
         workout.updatedAt = DateTime.now();
         await _localDataSource.saveWorkout(workout);
+        successCount++;
       }
       
       for (final checkIn in unsyncedCheckIns) {
         checkIn.isSynced = true;
         await _localDataSource.saveCheckIn(checkIn);
+        successCount++;
       }
       
       // Mark plans as synced
@@ -168,6 +307,7 @@ class SyncManager {
         plan.isDirty = false;
         plan.lastSync = DateTime.now();
         await _localDataSource.savePlan(plan);
+        successCount++;
       }
       
       // Update last sync time in user collection
@@ -177,7 +317,20 @@ class SyncManager {
         user.lastSync = DateTime.now();
         await _localDataSource.saveUser(user);
       }
-    } catch (e) {
+      
+      debugPrint('[SyncManager:PartialSuccess] Synced: $successCount/$totalCount, Failed: $failedCount');
+      
+    } catch (e, stackTrace) {
+      final errorType = _categorizeError(e);
+      final errorMessage = _getErrorMessage(e, errorType);
+      
+      debugPrint('[SyncManager:Error] Category: $errorType, Message: $errorMessage');
+      debugPrint('[SyncManager:Error] Stack trace: $stackTrace');
+      
+      failedCount = totalCount - successCount;
+      errors.add(errorMessage);
+      
+      // Don't rethrow - allow partial success
       // On conflict (409), server wins - silently update local
       if (e is DioException && e.response?.statusCode == 409) {
         debugPrint('=== CONFLICT RESOLUTION STARTED ===');
@@ -276,49 +429,24 @@ class SyncManager {
         }
       } else {
         // Re-throw other errors
-        rethrow;
+        failedCount = totalCount - successCount;
+        final errorType = _categorizeError(e);
+        final errorMessage = _getErrorMessage(e, errorType);
+        errors.add(errorMessage);
+        debugPrint('[SyncManager:Error] Category: $errorType, Message: $errorMessage');
       }
     }
-  }
-  
-  /// Retry helper method with exponential backoff
-  Future<T> _retryWithBackoff<T>(
-    Future<T> Function() operation, {
-    int maxRetries = _maxPullRetries,
-    Duration initialDelay = _initialRetryDelay,
-  }) async {
-    int attempt = 0;
-    while (attempt < maxRetries) {
-      try {
-        return await operation();
-      } on DioException catch (e) {
-        // Check if error is retry-able
-        final isRetryable = _isRetryableError(e);
-        if (!isRetryable || attempt >= maxRetries - 1) {
-          rethrow;
-        }
-        attempt++;
-        final delay = Duration(milliseconds: initialDelay.inMilliseconds * (1 << (attempt - 1)));
-        debugPrint('Pull sync retry attempt $attempt/$maxRetries after ${delay.inSeconds}s: ${e.message}');
-        await Future.delayed(delay);
-      } catch (e) {
-        // Non-DioException errors are not retry-able
-        rethrow;
-      }
-    }
-    throw Exception('Max retries exceeded');
+    
+    return SyncResult(
+      successCount: successCount,
+      failedCount: failedCount,
+      totalCount: totalCount,
+      errors: errors,
+    );
   }
 
-  /// Check if error is retry-able (network/timeout/server errors)
-  bool _isRetryableError(DioException error) {
-    return error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout ||
-        error.type == DioExceptionType.connectionError ||
-        (error.response?.statusCode != null &&
-            error.response!.statusCode! >= 500 &&
-            error.response!.statusCode! < 600);
-  }
+  // Helper method for future use (currently unused)
+  // bool _isRetryableError(DioException error) { ... }
 
   /// Get human-readable error type string
   String _getErrorType(DioException error) {
@@ -358,7 +486,9 @@ class SyncManager {
       
       // Wrap API call with retry mechanism
       final changes = await _retryWithBackoff(
-        () => _remoteDataSource.getSyncChanges(lastSync.toIso8601String()),
+        operation: () => _remoteDataSource.getSyncChanges(lastSync.toIso8601String()),
+        operationName: 'getSyncChanges',
+        maxRetries: _maxPullRetries,
       );
       
       debugPrint('[SyncManager] → API response received');

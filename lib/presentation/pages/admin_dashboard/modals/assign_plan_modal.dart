@@ -19,12 +19,9 @@ Future<void> showAssignPlanModal({
 
   // Load plan details to get assignedClientIds
   Map<String, dynamic>? planDetails;
-  bool isLoadingPlan = true;
   try {
     planDetails = await ref.read(adminControllerProvider.notifier).getPlanById(planId);
-    isLoadingPlan = false;
   } catch (e) {
-    isLoadingPlan = false;
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -41,31 +38,25 @@ Future<void> showAssignPlanModal({
   // - String IDs: "507f1f77bcf86cd799439011"
   // - Populated objects: { _id: "507f1f77bcf86cd799439011", userId: {...} }
   final assignedClientProfileIds = <String>{};
-  if (planDetails != null) {
-    final assignedIds = planDetails['assignedClientIds'];
-    developer.log('AssignPlanModal: assignedClientIds from plan: $assignedIds', name: 'AssignPlanModal');
-    developer.log('AssignPlanModal: assignedClientIds type: ${assignedIds.runtimeType}', name: 'AssignPlanModal');
-    
-    if (assignedIds is List) {
-      for (final id in assignedIds) {
-        String? idString;
-        
-        // Handle populated object: { _id: ObjectId, userId: ... }
-        if (id is Map) {
-          idString = id['_id']?.toString();
-          if (idString == null) {
-            // Fallback: try direct toString on the object
-            idString = id.toString();
-          }
-        } else {
-          // Handle string ID directly
-          idString = id?.toString();
-        }
-        
-        if (idString != null && idString.isNotEmpty) {
-          assignedClientProfileIds.add(idString);
-          developer.log('AssignPlanModal: Added assignedClientProfileId: $idString', name: 'AssignPlanModal');
-        }
+  final assignedIds = planDetails['assignedClientIds'];
+  developer.log('AssignPlanModal: assignedClientIds from plan: $assignedIds', name: 'AssignPlanModal');
+  developer.log('AssignPlanModal: assignedClientIds type: ${assignedIds.runtimeType}', name: 'AssignPlanModal');
+  
+  if (assignedIds is List) {
+    for (final id in assignedIds) {
+      String? idString;
+      
+      // Handle populated object: { _id: ObjectId, userId: ... }
+      if (id is Map) {
+        idString = id['_id']?.toString() ?? id.toString();
+      } else {
+        // Handle string ID directly
+        idString = id?.toString();
+      }
+      
+      if (idString != null && idString.isNotEmpty) {
+        assignedClientProfileIds.add(idString);
+        developer.log('AssignPlanModal: Added assignedClientProfileId: $idString', name: 'AssignPlanModal');
       }
     }
   }

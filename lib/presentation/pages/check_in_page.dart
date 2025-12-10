@@ -6,6 +6,8 @@ import 'package:camera/camera.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import 'package:image/image.dart' as img;
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
 import '../../presentation/widgets/gradient_background.dart';
@@ -121,6 +123,37 @@ class _CheckInPageState extends State<CheckInPage> {
     try {
       AppHaptic.heavy();
       
+      // Validate check-in date vs workout date
+      final localDataSource = LocalDataSource();
+      final todayWorkouts = await localDataSource.getTodayWorkouts();
+      final checkInDate = DateTime.now();
+      
+      debugPrint('[CheckIn:DateValidation] Check-in date: $checkInDate');
+      
+      if (todayWorkouts.isNotEmpty) {
+        final workoutDate = todayWorkouts.first.scheduledDate;
+        debugPrint('[CheckIn:DateValidation] Workout date: $workoutDate');
+        
+        // Check if dates match (same day)
+        final checkInDay = DateTime(checkInDate.year, checkInDate.month, checkInDate.day);
+        final workoutDay = DateTime(workoutDate.year, workoutDate.month, workoutDate.day);
+        
+        if (!checkInDay.isAtSameMomentAs(workoutDay)) {
+          debugPrint('[CheckIn:DateValidation] WARNING - Date mismatch detected');
+          
+          // Show warning (non-blocking)
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Check-in date doesn\'t match workout date'),
+                backgroundColor: AppColors.warning,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+      
       // Read and compress image
       Uint8List imageBytes;
       String? savedPath;
@@ -165,6 +198,37 @@ class _CheckInPageState extends State<CheckInPage> {
         imageBytes = await _capturedImage!.readAsBytes();
       }
 
+      // Get GPS location
+      Map<String, double>? gpsCoordinates;
+      try {
+        if (!kIsWeb) {
+          debugPrint('[CheckIn:GPS] Requesting location permission...');
+          final permissionStatus = await Permission.location.request();
+          
+          if (permissionStatus.isGranted) {
+            debugPrint('[CheckIn:GPS] Permission granted, getting location...');
+            final position = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                timeLimit: Duration(seconds: 10),
+              ),
+            );
+            gpsCoordinates = {
+              'latitude': position.latitude,
+              'longitude': position.longitude,
+            };
+            debugPrint('[CheckIn:GPS] Location obtained: ${gpsCoordinates['latitude']}, ${gpsCoordinates['longitude']}');
+          } else {
+            debugPrint('[CheckIn:GPS] Location permission denied');
+          }
+        } else {
+          debugPrint('[CheckIn:GPS] Web platform - GPS not available');
+        }
+      } catch (e) {
+        debugPrint('[CheckIn:GPS] Error getting location: $e');
+        // Continue without GPS - not blocking
+      }
+
       // Upload to Cloudinary and create check-in
       String? photoUrl;
       try {
@@ -180,7 +244,7 @@ class _CheckInPageState extends State<CheckInPage> {
         final checkInData = {
           'checkinDate': DateTime.now().toIso8601String(),
           'photoUrl': photoUrl,
-          'gpsCoordinates': null, // TODO: Add GPS coordinates if available
+          'gpsCoordinates': gpsCoordinates,
         };
         
         await remoteDataSource.createCheckIn(checkInData);
@@ -197,7 +261,6 @@ class _CheckInPageState extends State<CheckInPage> {
           ..timestamp = DateTime.now()
           ..isSynced = photoUrl != null; // Mark as synced if upload succeeded
         
-        final localDataSource = LocalDataSource();
         await localDataSource.saveCheckIn(checkIn);
       }
       

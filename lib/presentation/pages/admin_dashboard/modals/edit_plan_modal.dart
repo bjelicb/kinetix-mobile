@@ -1,16 +1,18 @@
-import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart' show AppColors, AppSpacing;
+import '../../../../domain/entities/user.dart';
 import '../../../controllers/admin_controller.dart';
 import '../../../widgets/neon_button.dart';
+import '../plan_builder_page.dart';
 
 Future<void> showEditPlanModal({
   required BuildContext context,
   required WidgetRef ref,
   required Map<String, dynamic> plan,
   required Future<void> Function() onUpdated,
+  List<User>? trainers,
 }) async {
   final planId = plan['_id'] as String?;
   if (planId == null) return;
@@ -75,6 +77,7 @@ Future<void> showEditPlanModal({
                     ),
                     const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
+                      // ignore: deprecated_member_use
                       value: selectedDifficulty,
                       decoration: const InputDecoration(
                         labelText: 'Difficulty',
@@ -115,95 +118,90 @@ Future<void> showEditPlanModal({
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     NeonButton(
-                      text: 'Update Plan',
-                      icon: Icons.save_rounded,
+                      text: 'Open Plan Builder',
+                      icon: Icons.arrow_forward_rounded,
                       onPressed: isButtonEnabled
                           ? () async {
-                              developer.log('EditPlanModal: Update button clicked', name: 'EditPlanModal');
-                              developer.log('EditPlanModal: planId=$planId', name: 'EditPlanModal');
-                              developer.log('EditPlanModal: name=${nameController.text.trim()}', name: 'EditPlanModal');
-                              developer.log('EditPlanModal: description=${descriptionController.text.trim()}', name: 'EditPlanModal');
-                              developer.log('EditPlanModal: difficulty=$selectedDifficulty', name: 'EditPlanModal');
+                              // Close modal and open Plan Builder directly
+                              // Don't update plan here - Plan Builder will handle it
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
                               
-                              try {
-                                // Validate weekly cost format
-                                final weeklyCostText = weeklyCostController.text.trim();
-                                double? weeklyCost;
-                                
-                                if (weeklyCostText.isNotEmpty) {
-                                  // Try parsing as double (supports both "7" and "7.50")
-                                  weeklyCost = double.tryParse(weeklyCostText);
-                                  if (weeklyCost == null) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: const Text('Invalid format. Please enter a number (e.g., 25.50 or 25)'),
-                                          backgroundColor: AppColors.warning,
-                                          duration: const Duration(seconds: 4),
-                                        ),
-                                      );
-                                    }
-                                    return;
-                                  }
-                                  if (weeklyCost < 0) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: const Text('Weekly cost cannot be negative'),
-                                          backgroundColor: AppColors.warning,
-                                          duration: const Duration(seconds: 4),
-                                        ),
-                                      );
-                                    }
-                                    return;
-                                  }
-                                } else {
-                                  weeklyCost = 0.0;
-                                }
-                                
-                                final planData = <String, dynamic>{
-                                  'name': nameController.text.trim(),
-                                  'description': descriptionController.text.trim().isEmpty
-                                      ? ''
-                                      : descriptionController.text.trim(),
-                                };
-                                if (selectedDifficulty != null) {
-                                  planData['difficulty'] = selectedDifficulty;
-                                }
-                                planData['weeklyCost'] = weeklyCost;
-                                
-                                developer.log('EditPlanModal: weeklyCost parsed: $weeklyCost (from input: "$weeklyCostText")', name: 'EditPlanModal');
-
-                                developer.log('EditPlanModal: Calling updatePlan with data: $planData', name: 'EditPlanModal');
-                                await ref.read(adminControllerProvider.notifier).updatePlan(planId, planData);
-                                developer.log('EditPlanModal: updatePlan completed successfully', name: 'EditPlanModal');
-                                
-                                if (!context.mounted) {
-                                  developer.log('EditPlanModal: Context not mounted after update', name: 'EditPlanModal');
-                                  return;
-                                }
-                                Navigator.pop(context);
-                                await onUpdated();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Plan updated successfully'),
-                                      backgroundColor: AppColors.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e, stackTrace) {
-                                developer.log('EditPlanModal: Error updating plan: $e', name: 'EditPlanModal', error: e, stackTrace: stackTrace);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
-                                      backgroundColor: AppColors.error,
-                                      duration: const Duration(seconds: 5),
-                                    ),
-                                  );
+                              // Load trainers if not provided
+                              List<User> trainersList = trainers ?? [];
+                              if (trainersList.isEmpty) {
+                                try {
+                                  trainersList = await ref.read(adminControllerProvider.notifier).getAllUsers()
+                                    .then((users) => users.where((u) => u.role == 'TRAINER').toList());
+                                } catch (e) {
+                                  // Fallback - will handle in Plan Builder
                                 }
                               }
+                              
+                                // Extract trainer ID - simplified logic
+                                String? trainerIdString;
+                                final trainerIdValue = plan['trainerId'];
+                                
+                                if (trainerIdValue is Map) {
+                                  trainerIdString = trainerIdValue['userId']?.toString() ?? 
+                                                   trainerIdValue['_id']?.toString() ?? 
+                                                   trainerIdValue['id']?.toString();
+                                } else if (trainerIdValue != null) {
+                                  trainerIdString = trainerIdValue.toString();
+                                }
+                                
+                                // Extract weekly cost from plan
+                                double? planWeeklyCost;
+                                final planWeeklyCostValue = plan['weeklyCost'];
+                                if (planWeeklyCostValue != null) {
+                                  if (planWeeklyCostValue is num) {
+                                    planWeeklyCost = planWeeklyCostValue.toDouble();
+                                  } else if (planWeeklyCostValue is String) {
+                                    planWeeklyCost = double.tryParse(planWeeklyCostValue);
+                                  }
+                                }
+                                
+                                // Navigate to Plan Builder with existing plan data
+                                if (!context.mounted) return;
+                                
+                                // Save root context for refresh callback
+                                final rootContext = Navigator.of(context, rootNavigator: true).context;
+                                
+                                final refresh = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PlanBuilderPage(
+                                      existingPlan: plan, // Pass existing plan for edit mode
+                                      trainerId: trainerIdString,
+                                      trainers: trainersList,
+                                      initialWeeklyCost: planWeeklyCost, // Pass weekly cost explicitly
+                                    ),
+                                  ),
+                                );
+                                
+                                // Refresh plan list if plan was updated/created
+                                if (refresh == true) {
+                                  debugPrint('[EditPlanModal] Plan was saved, calling onUpdated callback');
+                                  try {
+                                    await onUpdated();
+                                    debugPrint('[EditPlanModal] onUpdated callback completed');
+                                  } catch (e) {
+                                    debugPrint('[EditPlanModal] Error in onUpdated callback: $e');
+                                  }
+                                  
+                                  // Show success message using root context
+                                  if (rootContext.mounted) {
+                                    ScaffoldMessenger.of(rootContext).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Plan saved successfully'),
+                                        backgroundColor: AppColors.success,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  debugPrint('[EditPlanModal] Plan was not saved (refresh=$refresh)');
+                                }
                             }
                           : null,
                     ),

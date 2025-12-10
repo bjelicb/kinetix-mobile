@@ -9,6 +9,13 @@ class AppGradients {
   static const card = AppColors.cardGradient;
   static const success = AppColors.successGradient;
   
+  // Error Gradient (for paywall, critical alerts)
+  static const error = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.error, Color(0xFFD32F2F)],
+  );
+  
   // Custom Gradients
   static const purplePink = LinearGradient(
     begin: Alignment.topLeft,

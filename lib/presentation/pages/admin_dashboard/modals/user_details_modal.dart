@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -166,11 +165,13 @@ Future<void> showUserDetailsModal({
                 
                 if (confirmed == true) {
                   // Close details modal first
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   
                   debugPrint('[UserDetailsModal] Starting delete process for user: ${user.id}');
                   
                   // Show loading dialog using root navigator context
+                  if (!context.mounted) return;
                   final loadingContext = rootNavigator.context;
                   showDialog(
                     context: loadingContext,

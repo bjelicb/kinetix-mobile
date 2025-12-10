@@ -15,6 +15,8 @@ class NeonButton extends ConsumerStatefulWidget {
   final bool showGlow;
   final IconData? icon;
   final bool isLoading;
+  final bool isSmall; // Added for compact button sizes
+  final double? fontSize; // Added for custom font size
 
   const NeonButton({
     super.key,
@@ -26,6 +28,8 @@ class NeonButton extends ConsumerStatefulWidget {
     this.showGlow = true,
     this.icon,
     this.isLoading = false,
+    this.isSmall = false,
+    this.fontSize,
   });
 
   @override
@@ -116,29 +120,35 @@ class _NeonButtonState extends ConsumerState<NeonButton>
               borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
               child: Container(
                 padding: widget.padding ??
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    (widget.isSmall
+                        ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
+                        : const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (widget.isLoading)
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
+                      SizedBox(
+                        width: widget.isSmall ? 16 : 24,
+                        height: widget.isSmall ? 16 : 24,
                         child: SmoothLoader(
-                          size: 24,
+                          size: widget.isSmall ? 16 : 24,
                           color: AppColors.textPrimary,
                         ),
                       )
                     else if (widget.icon != null) ...[
-                      Icon(widget.icon, color: AppColors.textPrimary),
-                      const SizedBox(width: 8),
+                      Icon(
+                        widget.icon,
+                        color: AppColors.textPrimary,
+                        size: widget.isSmall ? 18 : 24,
+                      ),
+                      SizedBox(width: widget.isSmall ? 6 : 8),
                     ],
                     Text(
                       widget.text,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 16,
+                        fontSize: widget.fontSize ?? (widget.isSmall ? 14 : 16),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

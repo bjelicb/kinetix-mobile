@@ -1235,4 +1235,101 @@ class RemoteDataSource {
       rethrow;
     }
   }
+
+  // ========== AI MESSAGES API ==========
+  
+  /// Get AI messages for a client
+  /// GET /gamification/messages/:clientId
+  Future<List<Map<String, dynamic>>> getAIMessages(String clientId) async {
+    try {
+      developer.log('[RemoteDataSource:AIMessages] getAIMessages for clientId: $clientId');
+      final response = await _dio.get('/gamification/messages/$clientId');
+      
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      } else if (response.data is Map && response.data['data'] is List) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      
+      developer.log('[RemoteDataSource:AIMessages] ✓ Loaded ${response.data.length} messages');
+      return [];
+    } on DioException catch (e) {
+      developer.log('[RemoteDataSource:AIMessages] ✗ Error: ${e.message}', error: e);
+      throw Exception(e.response?.data['message'] ?? 'Failed to load AI messages');
+    }
+  }
+
+  /// Mark AI message as read
+  /// PATCH /gamification/messages/:messageId/read
+  Future<void> markAIMessageAsRead(String messageId) async {
+    try {
+      developer.log('[RemoteDataSource:AIMessages] Marking message $messageId as read');
+      await _dio.patch('/gamification/messages/$messageId/read');
+      developer.log('[RemoteDataSource:AIMessages] ✓ Message marked as read');
+    } on DioException catch (e) {
+      developer.log('[RemoteDataSource:AIMessages] ✗ Error: ${e.message}', error: e);
+      throw Exception(e.response?.data['message'] ?? 'Failed to mark message as read');
+    }
+  }
+
+  // ========== PLANS API - UNLOCK NEXT WEEK ==========
+  
+  /// Check if client can unlock next week
+  /// GET /plans/unlock-next-week/:clientId
+  Future<bool> canUnlockNextWeek(String clientId) async {
+    try {
+      developer.log('[RemoteDataSource:UnlockWeek] canUnlockNextWeek for clientId: $clientId');
+      final response = await _dio.get('/plans/unlock-next-week/$clientId');
+      
+      final canUnlock = response.data['canUnlock'] ?? false;
+      developer.log('[RemoteDataSource:UnlockWeek] ✓ Can unlock: $canUnlock');
+      return canUnlock;
+    } on DioException catch (e) {
+      developer.log('[RemoteDataSource:UnlockWeek] ✗ Error: ${e.message}', error: e);
+      // Return false on error (fail-safe)
+      return false;
+    }
+  }
+
+  /// Request next week plan assignment
+  /// POST /plans/request-next-week/:clientId
+  Future<void> requestNextWeek(String clientId) async {
+    try {
+      developer.log('[RemoteDataSource:UnlockWeek] requestNextWeek for clientId: $clientId');
+      await _dio.post('/plans/request-next-week/$clientId');
+      developer.log('[RemoteDataSource:UnlockWeek] ✓ Request sent successfully');
+    } on DioException catch (e) {
+      developer.log('[RemoteDataSource:UnlockWeek] ✗ Error: ${e.message}', error: e);
+      throw Exception(e.response?.data['message'] ?? 'Failed to request next week');
+    }
+  }
+
+  // ========== CHECK-INS API - DATE RANGE ==========
+  
+  /// Get check-ins by date range (for calendar view)
+  /// GET /checkins/range/start/:startDate/end/:endDate
+  Future<List<Map<String, dynamic>>> getCheckInsByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final startStr = startDate.toIso8601String();
+      final endStr = endDate.toIso8601String();
+      developer.log('[RemoteDataSource:CheckIns] getCheckInsByDateRange: $startStr to $endStr');
+      
+      final response = await _dio.get('/checkins/range/start/$startStr/end/$endStr');
+      
+      if (response.data is List) {
+        developer.log('[RemoteDataSource:CheckIns] ✓ Loaded ${response.data.length} check-ins');
+        return List<Map<String, dynamic>>.from(response.data);
+      } else if (response.data is Map && response.data['data'] is List) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      
+      return [];
+    } on DioException catch (e) {
+      developer.log('[RemoteDataSource:CheckIns] ✗ Error: ${e.message}', error: e);
+      throw Exception(e.response?.data['message'] ?? 'Failed to load check-ins');
+    }
+  }
 }

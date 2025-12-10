@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -115,7 +114,9 @@ class CurrentPlanCard extends ConsumerWidget {
               const SizedBox(height: 16),
               
               // Plan info
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   // Difficulty badge
                   _buildBadge(
@@ -124,14 +125,28 @@ class CurrentPlanCard extends ConsumerWidget {
                     color: getDifficultyColor(plan.difficulty),
                   ),
                   
-                  const SizedBox(width: 12),
-                  
                   // Workout days count
                   _buildBadge(
                     icon: Icons.calendar_today_rounded,
                     label: '${plan.workoutDays.where((d) => !d.isRestDay).length} days',
                     color: AppColors.info,
                   ),
+                  
+                  // Trainer name badge (if available)
+                  if (plan.trainerName != null && plan.trainerName!.isNotEmpty)
+                    _buildBadge(
+                      icon: Icons.person_rounded,
+                      label: plan.trainerName!,
+                      color: AppColors.primary,
+                    ),
+                  
+                  // Weekly cost badge (if available)
+                  if (plan.weeklyCost != null && plan.weeklyCost! > 0)
+                    _buildBadge(
+                      icon: Icons.euro_rounded,
+                      label: '${plan.weeklyCost!.toStringAsFixed(2)}€/week',
+                      color: AppColors.warning,
+                    ),
                 ],
               ),
               

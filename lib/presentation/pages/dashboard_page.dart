@@ -18,6 +18,10 @@ import '../../presentation/widgets/filter_bottom_sheet.dart';
 import '../../presentation/widgets/plans/current_plan_card.dart';
 import '../../presentation/widgets/balance_card.dart';
 import '../../presentation/widgets/weigh_in_card.dart';
+import '../../presentation/widgets/ai_messages_preview_card.dart';
+import '../../presentation/widgets/unlock_next_week_button.dart';
+import '../../presentation/widgets/calendar/workout_calendar_widget.dart';
+import '../../presentation/widgets/paywall_dialog.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../services/exercise_library_service.dart';
 import '../../data/datasources/remote_data_source.dart';
@@ -45,8 +49,38 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   void initState() {
     super.initState();
     _loadMuscleGroups();
-    _loadBalance();
+    _loadBalance().then((_) => _checkPaywall());
     _loadWeighIn();
+  }
+
+  Future<void> _checkPaywall() async {
+    final user = ref.read(authControllerProvider).valueOrNull;
+    if (user?.role != 'CLIENT') return;
+    
+    if (!mounted) return;
+    
+    // Check if monthly balance is negative
+    if (_balanceData != null) {
+      final monthlyBalance = (_balanceData!['monthlyBalance'] as num?)?.toDouble() ?? 0.0;
+      if (monthlyBalance < 0) {
+        // Show paywall dialog (non-dismissible)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => PaywallDialog(
+                balance: monthlyBalance.abs(),
+                onNavigateToPayment: () {
+                  Navigator.pop(context);
+                  context.push('/payment');
+                },
+              ),
+            );
+          }
+        });
+      }
+    }
   }
 
   Future<void> _loadBalance() async {
@@ -86,7 +120,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         _loadingBalance = false;
       });
       
-      debugPrint('[DashboardPage] _loadBalance SUCCESS - Balance: ${balance}€, Monthly: ${monthlyBalance}€');
+      debugPrint('[DashboardPage] _loadBalance SUCCESS - Balance: $balance€, Monthly: $monthlyBalance€');
     } catch (e, stackTrace) {
       debugPrint('[DashboardPage] _loadBalance ERROR: $e');
       debugPrint('[DashboardPage] Stack trace: $stackTrace');
@@ -220,10 +254,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
                     
                     // Current Plan Card (Client only - not for Admin or Trainer)
-                    if (!isTrainer && user?.role == 'CLIENT')
+                    if (!isTrainer && user?.role == 'CLIENT') ...[
                       const SliverToBoxAdapter(
                         child: CurrentPlanCard(),
                       ),
+                      // Unlock Next Week Button (in Plan section)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: UnlockNextWeekButton(),
+                        ),
+                      ),
+                    ],
                     
                     // Balance Card (Client only)
                     if (!isTrainer)
@@ -249,7 +291,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       SliverToBoxAdapter(
                         child: WeighInCard(
                           latestWeighIn: _weighInData,
-                          isLoading: _loadingWeighIn ?? false,
+                          isLoading: _loadingWeighIn == true,
                           onRefresh: () {
                             _loadWeighIn();
                           },
@@ -260,6 +302,21 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     if (!isTrainer)
                       SliverToBoxAdapter(
                         child: _buildQuickStats(context),
+                      ),
+                    
+                    // AI Messages Preview (Client only)
+                    if (!isTrainer && user?.role == 'CLIENT')
+                      const SliverToBoxAdapter(
+                        child: AIMessagesPreviewCard(),
+                      ),
+                    
+                    // Workout Calendar (Client only)
+                    if (!isTrainer && user?.role == 'CLIENT')
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: WorkoutCalendarWidget(),
+                        ),
                       ),
                     
                     // Nutrition Summary (Client only)

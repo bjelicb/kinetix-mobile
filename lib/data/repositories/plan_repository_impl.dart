@@ -23,7 +23,7 @@ class PlanRepositoryImpl implements PlanRepository {
         debugPrint('[PlanRepository] → RemoteDataSource is available');
         debugPrint('[PlanRepository] → Attempting to fetch plan from remote API...');
         try {
-          final response = await _remoteDataSource!.getCurrentPlan();
+          final response = await _remoteDataSource.getCurrentPlan();
           debugPrint('[PlanRepository] → Remote API response received');
           debugPrint('[PlanRepository] → Response keys: ${response.keys.toList()}');
           debugPrint('[PlanRepository] → Response isNotEmpty: ${response.isNotEmpty}');
@@ -32,7 +32,7 @@ class PlanRepositoryImpl implements PlanRepository {
           
           // Backend returns plan directly (not wrapped in 'plan' field)
           // Response can be null if no active plan, or the plan object itself
-          if (response != null && response.isNotEmpty) {
+          if (response.isNotEmpty) {
             // Check if response is the plan object directly
             if (response.containsKey('_id') || response.containsKey('id')) {
               debugPrint('[PlanRepository] → Valid plan response detected, converting to entity...');
@@ -62,7 +62,7 @@ class PlanRepositoryImpl implements PlanRepository {
           }
           
           debugPrint('[PlanRepository] ✗ No active plan found on server');
-        } catch (e, stackTrace) {
+        } catch (e) {
           // Silently handle 403 Forbidden (expected for ADMIN/TRAINER roles)
           final errorString = e.toString();
           if (errorString.contains('403') || errorString.contains('Forbidden')) {

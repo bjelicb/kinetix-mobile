@@ -36,12 +36,26 @@ class PlanMapper {
     debugPrint('[PlanMapper] → Plan ID: $planId');
     debugPrint('[PlanMapper] → Plan name: $planName');
     
+    // Extract trainerName and weeklyCost from DTO
+    final trainerName = dto['trainerName'] as String?;
+    final weeklyCostValue = dto['weeklyCost'];
+    double? weeklyCost;
+    if (weeklyCostValue != null) {
+      if (weeklyCostValue is num) {
+        weeklyCost = weeklyCostValue.toDouble();
+      } else if (weeklyCostValue is String) {
+        weeklyCost = double.tryParse(weeklyCostValue);
+      }
+    }
+    
     final plan = Plan(
       id: planId,
       name: planName,
       difficulty: dto['difficulty'] as String? ?? 'INTERMEDIATE',
       description: dto['description'] as String?,
       trainerId: trainerId,
+      trainerName: trainerName,
+      weeklyCost: weeklyCost,
       workoutDays: workoutsField
           .map((w) => _workoutDayFromDto(w as Map<String, dynamic>))
           .toList(),
@@ -69,12 +83,16 @@ class PlanMapper {
   
   /// Convert Isar collection to domain entity
   static Plan fromCollection(PlanCollection collection) {
+    // Note: trainerName and weeklyCost may not be stored in collection
+    // They are typically only available from API responses
     return Plan(
       id: collection.planId,
       name: collection.name,
       difficulty: collection.difficulty,
       description: collection.description,
       trainerId: collection.trainerId,
+      trainerName: null, // Not stored in collection, only from API
+      weeklyCost: null, // Not stored in collection, only from API
       workoutDays: collection.workoutDays
           .map((day) => _workoutDayFromEmbedded(day))
           .toList(),

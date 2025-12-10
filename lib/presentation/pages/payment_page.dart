@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/gradients.dart';
 import '../../presentation/widgets/gradient_background.dart';
 import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
 import '../../data/datasources/remote_data_source.dart';
-import '../../data/datasources/local_data_source.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,7 +85,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         await _loadBalance();
         
         // Navigate back
-        context.pop();
+        if (mounted) context.pop();
       }
     } catch (e) {
       if (mounted) {
@@ -257,7 +255,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
                   const SizedBox(height: 24),
                 ],
 

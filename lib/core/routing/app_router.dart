@@ -18,6 +18,7 @@ import '../../presentation/pages/workout_history_page.dart';
 import '../../presentation/pages/admin_dashboard_page.dart';
 import '../../presentation/pages/payment_page.dart';
 import '../../presentation/pages/weigh_in_page.dart';
+import '../../presentation/pages/ai_messages_page.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import '../../presentation/widgets/custom_bottom_nav.dart';
 import '../../core/theme/animations.dart';
@@ -30,6 +31,7 @@ part 'app_router.g.dart';
 /// Helper function to check if user should be required to check in
 /// Returns true if:
 /// - User is a CLIENT (not TRAINER)
+/// - User has an active plan
 /// - User has a workout scheduled for today
 /// - The workout is NOT completed
 /// - User has NOT already checked in today
@@ -42,9 +44,43 @@ Future<bool> _shouldRequireCheckIn(User? user) async {
   
   final localDataSource = LocalDataSource();
   
+  // Check if user has an active plan
+  final activePlan = await localDataSource.getActivePlan();
+  debugPrint('[AppRouter:CheckInValidation] Active plan check: ${activePlan != null}');
+  
+  if (activePlan == null) {
+    debugPrint('[AppRouter:CheckInValidation] No active plan - Check-in NOT required');
+    return false;
+  }
+  
+  debugPrint('[AppRouter:CheckInValidation] Active plan found: ${activePlan.name}');
+  
   // Check if user already checked in today
   final todayCheckIn = await localDataSource.getTodayCheckIn();
-  if (todayCheckIn != null) return false;
+  if (todayCheckIn != null) {
+    debugPrint('[AppRouter:CheckInValidation] Already checked in today - Check-in NOT required');
+    return false;
+  }
+  
+  // Check if there's a queued check-in for today (offline mode)
+  final unsyncedCheckIns = await localDataSource.getUnsyncedCheckIns();
+  if (unsyncedCheckIns.isNotEmpty) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    for (final checkIn in unsyncedCheckIns) {
+      final checkInDate = DateTime(
+        checkIn.timestamp.year,
+        checkIn.timestamp.month,
+        checkIn.timestamp.day,
+      );
+      
+      if (checkInDate.isAtSameMomentAs(today)) {
+        debugPrint('[AppRouter:CheckInValidation] Found queued check-in for today - Bypassing requirement');
+        return false;
+      }
+    }
+  }
   
   // Check if user has workouts scheduled for today
   final todayWorkouts = await localDataSource.getTodayWorkouts();
@@ -464,6 +500,24 @@ GoRouter appRouter(AppRouterRef ref) {
               scale: scaleAnimation,
               child: FadeTransition(opacity: animation, child: child),
             );
+          },
+          transitionDuration: AppAnimations.pageTransitionDuration,
+        ),
+      ),
+      GoRoute(
+        path: '/ai-messages',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AIMessagesPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final slideAnimation = Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: AppAnimations.pageTransitionCurve,
+            ));
+            return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
         ),

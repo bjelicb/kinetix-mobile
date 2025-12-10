@@ -332,6 +332,59 @@ class LocalDataSource {
     }
   }
   
+  /// Get active plan (plan with workouts scheduled for today or in the future)
+  Future<PlanCollection?> getActivePlan() async {
+    debugPrint('[LocalDataSource:ActivePlan] Checking for active plan');
+    if (kIsWeb) {
+      debugPrint('[LocalDataSource:ActivePlan] Web platform - returning null');
+      return null;
+    }
+    
+    final isar = await _isar;
+    if (isar == null) {
+      debugPrint('[LocalDataSource:ActivePlan] Isar is null - returning null');
+      return null;
+    }
+    
+    try {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      // Get all workouts scheduled for today or in the future
+      final isarInstance = isar;
+      final workoutCollection = isarInstance.collection<WorkoutCollection>();
+      final futureWorkouts = await workoutCollection
+          .filter()
+          .scheduledDateGreaterThan(today.subtract(const Duration(days: 1)))
+          .findAll();
+      
+      debugPrint('[LocalDataSource:ActivePlan] Found ${futureWorkouts.length} future/current workouts');
+      
+      if (futureWorkouts.isEmpty) {
+        debugPrint('[LocalDataSource:ActivePlan] No active plan found (no future workouts)');
+        return null;
+      }
+      
+      // Get all plans and return the first one (assuming one active plan per user)
+      final planCollection = isarInstance.collection<PlanCollection>();
+      final plans = await planCollection.where().findAll();
+      
+      if (plans.isEmpty) {
+        debugPrint('[LocalDataSource:ActivePlan] No plans found in database');
+        return null;
+      }
+      
+      final activePlan = plans.first;
+      debugPrint('[LocalDataSource:ActivePlan] Found active plan: ${activePlan.name} (${activePlan.planId})');
+      return activePlan;
+      
+    } catch (e, stackTrace) {
+      debugPrint('[LocalDataSource:ActivePlan] ERROR: $e');
+      debugPrint('[LocalDataSource:ActivePlan] Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
   Future<void> savePlan(PlanCollection plan) async {
     debugPrint('[LocalDataSource] savePlan() START - planId: ${plan.planId}, name: ${plan.name}');
     if (kIsWeb) {

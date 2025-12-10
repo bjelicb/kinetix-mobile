@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/gradients.dart';
 import '../widgets/gradient_card.dart';
 import '../widgets/neon_button.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +18,7 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[BalanceCard] Building - balance: ${balance}€, monthlyBalance: ${monthlyBalance}€');
+    debugPrint('[BalanceCard] Building - balance: $balance€, monthlyBalance: $monthlyBalance€');
     debugPrint('[BalanceCard] Showing balance card (always visible for testing)');
 
     return Padding(

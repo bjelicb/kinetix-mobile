@@ -11,7 +11,6 @@ import '../../presentation/widgets/custom_numpad.dart';
 import '../../presentation/widgets/rpe_picker.dart';
 import '../../presentation/widgets/empty_state.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
-import '../../presentation/widgets/gradient_card.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/entities/exercise.dart';
@@ -49,11 +48,15 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
 
   bool _hasValidCheckIn = false;
   bool _checkingCheckIn = true;
+  DateTime? _workoutStartTime;
+  bool _hasShownFastCompletionMessage = false;
 
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _workoutStartTime = DateTime.now(); // Track workout start time
+    debugPrint('[WorkoutRunner:Init] Workout started at $_workoutStartTime');
     _startTimer();
     _checkCheckInStatus();
   }
@@ -428,6 +431,122 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
     _deletedSetIndex = null;
   }
 
+  /// Check if exercise is completed (ALL sets must be completed)
+  bool _isExerciseCompleted(Exercise exercise) {
+    debugPrint('[WorkoutRunner:CheckboxCompletion] Checking exercise "${exercise.name}" completion status');
+    if (exercise.sets.isEmpty) {
+      debugPrint('[WorkoutRunner:CheckboxCompletion] Exercise has no sets - Not completed');
+      return false;
+    }
+    final isCompleted = exercise.sets.every((set) => set.isCompleted);
+    debugPrint('[WorkoutRunner:CheckboxCompletion] Exercise "${exercise.name}" - ${exercise.sets.where((s) => s.isCompleted).length}/${exercise.sets.length} sets completed - Overall: $isCompleted');
+    return isCompleted;
+  }
+
+  /// Toggle exercise completion - toggles ALL sets in the exercise
+  Future<void> _toggleExerciseCompletion(int exerciseIndex, Workout workout) async {
+    AppHaptic.selection();
+    
+    final exercise = workout.exercises[exerciseIndex];
+    final isCurrentlyCompleted = _isExerciseCompleted(exercise);
+    final newCompletedState = !isCurrentlyCompleted;
+    
+    debugPrint('[WorkoutRunner:CheckboxCompletion] Exercise $exerciseIndex toggle initiated - Current state: $isCurrentlyCompleted');
+    debugPrint('[WorkoutRunner:CheckboxCompletion] Updating ${exercise.sets.length} sets to $newCompletedState');
+    
+    // Create updated sets with new completion state
+    final updatedSets = exercise.sets.map((set) => WorkoutSet(
+      id: set.id,
+      weight: set.weight,
+      reps: set.reps,
+      rpe: set.rpe,
+      isCompleted: newCompletedState,
+    )).toList();
+    
+    // Create updated exercise
+    final updatedExercise = Exercise(
+      id: exercise.id,
+      name: exercise.name,
+      targetMuscle: exercise.targetMuscle,
+      sets: updatedSets,
+      category: exercise.category,
+      equipment: exercise.equipment,
+      instructions: exercise.instructions,
+    );
+    
+    // Create updated workout
+    final updatedExercises = List<Exercise>.from(workout.exercises);
+    updatedExercises[exerciseIndex] = updatedExercise;
+    
+    final updatedWorkout = Workout(
+      id: workout.id,
+      serverId: workout.serverId,
+      name: workout.name,
+      scheduledDate: workout.scheduledDate,
+      isCompleted: workout.isCompleted,
+      exercises: updatedExercises,
+      isDirty: true,
+      updatedAt: DateTime.now(),
+    );
+    
+    // Fast completion validation (only for first exercise, only once)
+    if (!_hasShownFastCompletionMessage && 
+        exerciseIndex == 0 && 
+        newCompletedState == true &&
+        _workoutStartTime != null) {
+      
+      final duration = DateTime.now().difference(_workoutStartTime!);
+      debugPrint('[WorkoutRunner:FastCompletion] Workout duration: ${duration.inSeconds}s - Threshold: 30s');
+      
+      if (duration.inSeconds < 30) {
+        _hasShownFastCompletionMessage = true;
+        debugPrint('[WorkoutRunner:FastCompletion] Fast completion detected - Showing warning');
+        
+        // Show friendly humorous warning
+        if (mounted) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Mnogo si brzo ovo uradio, nadam se da stvarno jesi 😉'),
+                  duration: Duration(seconds: 4),
+                  backgroundColor: AppColors.warning,
+                ),
+              );
+            }
+          });
+        }
+      }
+    }
+    
+    try {
+      // Optimistic UI update + save to repository
+      ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
+      debugPrint('[WorkoutRunner:CheckboxCompletion] Isar DB update SUCCESS');
+      
+      // Trigger background sync (non-blocking)
+      // SyncManager will be called automatically
+      
+    } catch (e) {
+      // Rollback on error - revert to original state
+      debugPrint('[WorkoutRunner:CheckboxCompletion] ERROR - Rollback initiated: $e');
+      
+      // Revert the workout update
+      ref.read(workoutControllerProvider.notifier).updateWorkout(workout);
+      
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating exercise: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _finishWorkout(Workout workout) async {
     AppHaptic.heavy();
     
@@ -698,15 +817,55 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Exercise Name
-          Text(
-            exercise.name,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            exercise.targetMuscle,
-            style: Theme.of(context).textTheme.bodySmall,
+          // Exercise Header with Checkbox
+          Row(
+            children: [
+              // Exercise Checkbox (PREČICA - toggles ALL sets)
+              GestureDetector(
+                onTap: () => _toggleExerciseCompletion(exerciseIndex, workout),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _isExerciseCompleted(exercise)
+                        ? AppColors.success
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isExerciseCompleted(exercise)
+                          ? AppColors.success
+                          : AppColors.textSecondary,
+                      width: 2,
+                    ),
+                  ),
+                  child: _isExerciseCompleted(exercise)
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: AppColors.textPrimary,
+                          size: 20,
+                        )
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Exercise Name
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise.name,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      exercise.targetMuscle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           

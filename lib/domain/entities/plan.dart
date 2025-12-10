@@ -4,6 +4,8 @@ class Plan {
   final String difficulty;
   final String? description;
   final String trainerId;
+  final String? trainerName; // Trainer's name for display
+  final double? weeklyCost; // Weekly cost in euros
   final List<WorkoutDay> workoutDays;
   
   Plan({
@@ -12,6 +14,8 @@ class Plan {
     required this.difficulty,
     this.description,
     required this.trainerId,
+    this.trainerName,
+    this.weeklyCost,
     required this.workoutDays,
   });
 }

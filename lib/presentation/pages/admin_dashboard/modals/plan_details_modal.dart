@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -170,12 +169,40 @@ Future<void> showPlanDetailsModal({
         TextButton.icon(
           onPressed: () async {
             Navigator.pop(context);
+            // Load trainers for Plan Builder - ensure we get all trainers
+            List<User> trainers = [];
+            try {
+              final allUsers = await ref.read(adminControllerProvider.notifier).getAllUsers();
+              trainers = allUsers.where((u) => u.role == 'TRAINER').toList();
+              debugPrint('[PlanDetailsModal] Loaded ${trainers.length} trainers for Plan Builder');
+              debugPrint('[PlanDetailsModal] Trainer IDs: ${trainers.map((t) => '${t.name} (${t.id})').join(", ")}');
+            } catch (e) {
+              debugPrint('[PlanDetailsModal] Error loading trainers: $e');
+              // Will handle in Plan Builder if needed
+            }
+            
+            if (!context.mounted) return;
+            
+            // Save root context before showing modal
+            final rootContext = Navigator.of(context, rootNavigator: true).context;
+            
             await showEditPlanModal(
               context: context,
               ref: ref,
               plan: planData,
-              onUpdated: onRefresh,
+              trainers: trainers,
+              onUpdated: () async {
+                debugPrint('[PlanDetailsModal] onUpdated callback called - refreshing plans...');
+                await onRefresh();
+                debugPrint('[PlanDetailsModal] Plans refreshed after edit');
+              },
             );
+            
+            // Ensure plans are refreshed even if callback wasn't called
+            debugPrint('[PlanDetailsModal] EditPlanModal closed, ensuring plans are refreshed...');
+            if (rootContext.mounted) {
+              await onRefresh();
+            }
           },
           icon: const Icon(Icons.edit_rounded, size: 18),
           label: const Text('Edit'),
@@ -217,14 +244,19 @@ Future<void> showPlanDetailsModal({
             
             if (confirmed == true) {
               // Close details modal first
+              if (!context.mounted) return;
               Navigator.pop(context);
               
               debugPrint('[PlanDetailsModal] Starting duplicate process for plan: $planId');
               
+              // Save context references before async operations
+              final modalContext = context;
+              final rootContext = rootNavigator.context;
+              
               // Show loading dialog using root navigator context
-              final loadingContext = rootNavigator.context;
+              if (!modalContext.mounted) return;
               showDialog(
-                context: loadingContext,
+                context: rootContext,
                 barrierDismissible: false,
                 builder: (dialogContext) => AlertDialog(
                   backgroundColor: AppColors.surface,
@@ -245,18 +277,23 @@ Future<void> showPlanDetailsModal({
               try {
                 debugPrint('[PlanDetailsModal] Calling duplicatePlan with ID: $planId');
                 await ref.read(adminControllerProvider.notifier).duplicatePlan(planId);
-                debugPrint('[PlanDetailsModal] Duplicate successful, refreshing...');
+                debugPrint('[PlanDetailsModal] Duplicate successful');
+                
+                // Close loading dialog first
+                if (rootNavigator.canPop()) {
+                  rootNavigator.pop();
+                }
+                
+                // Refresh parent list (modal stays open)
                 await onRefresh();
                 
-                // Close loading dialog
-                rootNavigator.pop();
-                
-                // Show success message
-                if (loadingContext.mounted) {
-                  ScaffoldMessenger.of(loadingContext).showSnackBar(
+                // Show success message in modal context
+                if (modalContext.mounted) {
+                  ScaffoldMessenger.of(modalContext).showSnackBar(
                     const SnackBar(
                       content: Text('Plan duplicated successfully'),
                       backgroundColor: AppColors.success,
+                      duration: Duration(seconds: 3),
                     ),
                   );
                 }
@@ -264,14 +301,16 @@ Future<void> showPlanDetailsModal({
                 debugPrint('[PlanDetailsModal] ERROR duplicating plan: $e');
                 debugPrint('[PlanDetailsModal] Stack trace: $stackTrace');
                 
-                // Close loading dialog
-                rootNavigator.pop();
+                // Close loading dialog first
+                if (rootNavigator.canPop()) {
+                  rootNavigator.pop();
+                }
                 
-                // Show error message
-                if (loadingContext.mounted) {
-                  ScaffoldMessenger.of(loadingContext).showSnackBar(
+                // Show error message in modal context
+                if (modalContext.mounted) {
+                  ScaffoldMessenger.of(modalContext).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                      content: Text('Error duplicating plan: ${e.toString().replaceAll('Exception: ', '').split('\n').first}'),
                       backgroundColor: AppColors.error,
                       duration: const Duration(seconds: 4),
                     ),
@@ -322,15 +361,16 @@ Future<void> showPlanDetailsModal({
             debugPrint('[PlanDetailsModal] Delete confirmation result: $confirmed');
             
             if (confirmed == true) {
-              // Close details modal first
-              Navigator.pop(context);
-              
               debugPrint('[PlanDetailsModal] Starting delete process for plan: $planId');
               
+              // Save context references before async operations
+              final modalContext = context;
+              final rootContext = rootNavigator.context;
+              
+              if (!rootContext.mounted) return;
               // Show loading dialog using root navigator context
-              final loadingContext = rootNavigator.context;
               showDialog(
-                context: loadingContext,
+                context: rootContext,
                 barrierDismissible: false,
                 builder: (dialogContext) => AlertDialog(
                   backgroundColor: AppColors.surface,
@@ -351,33 +391,38 @@ Future<void> showPlanDetailsModal({
               try {
                 debugPrint('[PlanDetailsModal] Calling deletePlan with ID: $planId');
                 await ref.read(adminControllerProvider.notifier).deletePlan(planId);
-                debugPrint('[PlanDetailsModal] Delete successful, refreshing...');
+                debugPrint('[PlanDetailsModal] Delete successful');
+                
+                // Close loading dialog first
+                if (rootNavigator.canPop()) {
+                  rootNavigator.pop();
+                }
+                
+                // Close modal
+                if (modalContext.mounted) {
+                  Navigator.pop(modalContext);
+                }
+                
+                // Refresh parent list after modal is closed
                 await onRefresh();
                 
-                // Close loading dialog
-                rootNavigator.pop();
-                
-                // Show success message
-                if (loadingContext.mounted) {
-                  ScaffoldMessenger.of(loadingContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Plan deleted successfully'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
+                // Success message will be shown by parent page if needed
+                // No need to show SnackBar here as modal is already closed
+                debugPrint('[PlanDetailsModal] Plan deleted and modal closed');
               } catch (e, stackTrace) {
                 debugPrint('[PlanDetailsModal] ERROR deleting plan: $e');
                 debugPrint('[PlanDetailsModal] Stack trace: $stackTrace');
                 
-                // Close loading dialog
-                rootNavigator.pop();
+                // Close loading dialog first
+                if (rootNavigator.canPop()) {
+                  rootNavigator.pop();
+                }
                 
-                // Show error message
-                if (loadingContext.mounted) {
-                  ScaffoldMessenger.of(loadingContext).showSnackBar(
+                // Show error message in modal context (modal still open)
+                if (modalContext.mounted) {
+                  ScaffoldMessenger.of(modalContext).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                      content: Text('Error deleting plan: ${e.toString().replaceAll('Exception: ', '').split('\n').first}'),
                       backgroundColor: AppColors.error,
                       duration: const Duration(seconds: 4),
                     ),

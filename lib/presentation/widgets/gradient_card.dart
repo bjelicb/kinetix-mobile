@@ -14,6 +14,7 @@ class GradientCard extends ConsumerStatefulWidget {
   final VoidCallback? onTap;
   final bool showGlow;
   final Color? glowColor;
+  final Color? borderColor; // Added for tone-based borders
   final double? elevation;
   final bool pressEffect;
   final double pressedScale;
@@ -30,6 +31,7 @@ class GradientCard extends ConsumerStatefulWidget {
     this.onTap,
     this.showGlow = false,
     this.glowColor,
+    this.borderColor,
     this.elevation,
     this.pressEffect = false,
     this.pressedScale = 0.98,
@@ -80,12 +82,17 @@ class _GradientCardState extends ConsumerState<GradientCard>
         borderRadius: widget.useHexShape
             ? null
             : BorderRadius.circular(widget.borderRadius ?? 16),
-        border: widget.showCyberBorder
+        border: widget.borderColor != null
             ? Border.all(
-                width: 1.5,
-                color: _getAnimatedBorderColor(theme),
+                width: 2,
+                color: widget.borderColor!,
               )
-            : null,
+            : widget.showCyberBorder
+                ? Border.all(
+                    width: 1.5,
+                    color: _getAnimatedBorderColor(theme),
+                  )
+                : null,
         boxShadow: widget.showGlow
             ? [
                 BoxShadow(
