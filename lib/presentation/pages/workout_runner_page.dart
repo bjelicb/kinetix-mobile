@@ -1,22 +1,22 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/gradients.dart';
-import '../../presentation/controllers/workout_controller.dart';
-import '../../presentation/widgets/gradient_background.dart';
-import '../../presentation/widgets/gradient_card.dart';
-import '../../presentation/widgets/neon_button.dart';
-import '../../presentation/widgets/custom_numpad.dart';
-import '../../presentation/widgets/rpe_picker.dart';
-import '../../presentation/widgets/empty_state.dart';
-import '../../presentation/widgets/shimmer_loader.dart';
-import '../../core/utils/haptic_feedback.dart';
-import '../../domain/entities/workout.dart';
-import '../../domain/entities/exercise.dart';
-import '../../data/datasources/local_data_source.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
+import '../../core/theme/app_colors.dart';
+import '../../presentation/controllers/workout_controller.dart';
+import '../../presentation/widgets/gradient_background.dart';
+import '../../presentation/widgets/empty_state.dart';
+import '../../presentation/widgets/shimmer_loader.dart';
+import '../../presentation/pages/workout/services/workout_timer_service.dart';
+import '../../presentation/pages/workout/services/workout_validation_service.dart';
+import '../../presentation/pages/workout/services/workout_input_service.dart';
+import '../../presentation/pages/workout/services/workout_state_service.dart';
+import '../../presentation/widgets/workout/workout_header_widget.dart';
+import '../../presentation/widgets/workout/exercise_card_widget.dart';
+import '../../presentation/widgets/workout/finish_workout_button_widget.dart';
+import '../../presentation/widgets/workout/check_in_required_widget.dart';
+import '../../domain/entities/exercise.dart';
+import '../../domain/entities/workout.dart';
 
 class WorkoutRunnerPage extends ConsumerStatefulWidget {
   final String workoutId;
@@ -28,20 +28,7 @@ class WorkoutRunnerPage extends ConsumerStatefulWidget {
 }
 
 class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
-  Timer? _timer;
-  int _elapsedSeconds = 0;
-  bool _isPaused = false;
-  // Reserved for future inline editing feature
-  // ignore: unused_field
-  String? _editingField; // 'weight', 'reps', 'rpe'
-  String _editingValue = '';
-  // ignore: unused_field
-  int? _editingExerciseIndex;
-  // ignore: unused_field
-  int? _editingSetIndex;
-  WorkoutSet? _deletedSet;
-  int? _deletedExerciseIndex;
-  int? _deletedSetIndex;
+  late WorkoutTimerService _timerService;
   ConfettiController? _confettiController;
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _exerciseKeys = {};
@@ -50,328 +37,110 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   bool _checkingCheckIn = true;
   DateTime? _workoutStartTime;
   bool _hasShownFastCompletionMessage = false;
+  
+  WorkoutSet? _deletedSet;
+  int? _deletedExerciseIndex;
+  int? _deletedSetIndex;
 
   @override
   void initState() {
     super.initState();
+    _timerService = WorkoutTimerService();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
-    _workoutStartTime = DateTime.now(); // Track workout start time
+    _workoutStartTime = DateTime.now();
     debugPrint('[WorkoutRunner:Init] Workout started at $_workoutStartTime');
-    _startTimer();
+    _timerService.startTimer(() {
+      if (mounted) setState(() {});
+    });
     _checkCheckInStatus();
   }
 
   Future<void> _checkCheckInStatus() async {
-    debugPrint('[WorkoutRunnerPage] _checkCheckInStatus START');
-    try {
-      final localDataSource = LocalDataSource();
-      debugPrint('[WorkoutRunnerPage] Checking for today\'s check-in...');
-      final todayCheckIn = await localDataSource.getTodayCheckIn();
-      
-      debugPrint('[WorkoutRunnerPage] Today check-in result: ${todayCheckIn != null ? "FOUND" : "NOT FOUND"}');
-      if (todayCheckIn != null) {
-        debugPrint('[WorkoutRunnerPage] Check-in ID: ${todayCheckIn.id}, Timestamp: ${todayCheckIn.timestamp}');
-      }
-      
-      setState(() {
-        _hasValidCheckIn = todayCheckIn != null;
-        _checkingCheckIn = false;
-      });
-
-      debugPrint('[WorkoutRunnerPage] Check-in status: ${_hasValidCheckIn ? "VALID" : "INVALID"}');
-
-      // If no check-in, redirect to check-in page
-      if (!_hasValidCheckIn && mounted) {
-        debugPrint('[WorkoutRunnerPage] No valid check-in, redirecting to check-in page');
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You must check in before starting a workout'),
-              backgroundColor: AppColors.warning,
-              duration: Duration(seconds: 3),
-            ),
-          );
-          context.go('/check-in');
-        });
-      } else {
-        debugPrint('[WorkoutRunnerPage] Valid check-in found, allowing workout');
-      }
-    } catch (e, stackTrace) {
-      debugPrint('[WorkoutRunnerPage] Error checking check-in status: $e');
-      debugPrint('[WorkoutRunnerPage] Stack trace: $stackTrace');
-      setState(() {
-        _checkingCheckIn = false;
-      });
-    }
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused) {
-        setState(() {
-          _elapsedSeconds++;
-        });
-      }
-    });
-  }
-
-  void _togglePause() {
+    final result = await WorkoutValidationService.checkCheckInStatus();
+    
+    if (!mounted) return;
+    
     setState(() {
-      _isPaused = !_isPaused;
+      _hasValidCheckIn = result.hasValidCheckIn;
+      _checkingCheckIn = false;
     });
-    AppHaptic.medium();
-  }
 
-  String _formatTime(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-  }
-
-  void _showNumpad(String field, int exerciseIndex, int setIndex, String initialValue, [workout]) {
-    setState(() {
-      _editingField = field;
-      _editingExerciseIndex = exerciseIndex;
-      _editingSetIndex = setIndex;
-      _editingValue = initialValue;
-    });
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => CustomNumpad(
-        initialValue: initialValue,
-        allowDecimal: field == 'weight',
-        onValueChanged: (value) {
-          setState(() {
-            _editingValue = value;
-          });
-        },
-        onConfirm: () {
-          if (workout != null) {
-            _saveValue(field, exerciseIndex, setIndex, _editingValue, workout);
-          }
-          Navigator.pop(context);
-        },
-      ),
-    ).then((_) {
-      setState(() {
-        _editingField = null;
-        _editingValue = '';
-      });
-    });
-  }
-
-  void _showRpePicker(int exerciseIndex, int setIndex, double? initialValue, [workout]) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => RpePicker(
-        initialValue: initialValue,
-        onRpeSelected: (rpe) {
-          Navigator.pop(context);
-          if (workout != null) {
-            _saveRpe(exerciseIndex, setIndex, rpe, workout);
-          }
-        },
-      ),
-    );
-  }
-
-  void _saveValue(String field, int exerciseIndex, int setIndex, String value, workout) {
-    AppHaptic.medium();
-    
-    // Parse value
-    final numValue = field == 'weight' 
-        ? double.tryParse(value) ?? 0.0
-        : int.tryParse(value) ?? 0;
-    
-    // Update workout set
-    final exercise = workout.exercises[exerciseIndex];
-    final set = exercise.sets[setIndex];
-    
-    final updatedSet = WorkoutSet(
-      id: set.id,
-      weight: field == 'weight' ? numValue as double : set.weight,
-      reps: field == 'reps' ? numValue as int : set.reps,
-      rpe: set.rpe,
-      isCompleted: set.isCompleted,
-    );
-    
-    final updatedSets = List<WorkoutSet>.from(exercise.sets);
-    updatedSets[setIndex] = updatedSet;
-    
-    final updatedExercise = Exercise(
-      id: exercise.id,
-      name: exercise.name,
-      targetMuscle: exercise.targetMuscle,
-      sets: updatedSets,
-    );
-    
-    final updatedExercises = List<Exercise>.from(workout.exercises);
-    updatedExercises[exerciseIndex] = updatedExercise;
-    
-    final updatedWorkout = Workout(
-      id: workout.id,
-      serverId: workout.serverId,
-      name: workout.name,
-      scheduledDate: workout.scheduledDate,
-      isCompleted: workout.isCompleted,
-      exercises: updatedExercises,
-      isDirty: true,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Save to repository
-    ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
-    // Auto-advance: weight -> reps -> RPE -> next set
-    if (field == 'weight') {
-      // After weight, open reps
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          _showNumpad('reps', exerciseIndex, setIndex, set.reps.toString(), updatedWorkout);
-        }
-      });
-    } else if (field == 'reps') {
-      // After reps, open RPE
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          _showRpePicker(exerciseIndex, setIndex, set.rpe, updatedWorkout);
-        }
-      });
+    if (!_hasValidCheckIn && mounted) {
+      WorkoutValidationService.showCheckInRequired(context);
     }
   }
 
-  void _saveRpe(int exerciseIndex, int setIndex, double rpe, workout) {
-    AppHaptic.medium();
-    
-    // Update workout set
-    final exercise = workout.exercises[exerciseIndex];
-    final set = exercise.sets[setIndex];
-    
-    final updatedSet = WorkoutSet(
-      id: set.id,
-      weight: set.weight,
-      reps: set.reps,
+  void _showNumpad(String field, int exerciseIndex, int setIndex, String initialValue, Workout workout) {
+    WorkoutInputService.showNumpad(
+      context: context,
+      field: field,
+      exerciseIndex: exerciseIndex,
+      setIndex: setIndex,
+      initialValue: initialValue,
+      workout: workout,
+      onValueSaved: (field, exerciseIndex, setIndex, value, workout) {
+        _saveValue(field, exerciseIndex, setIndex, value, workout);
+      },
+    );
+  }
+
+  void _showRpePicker(int exerciseIndex, int setIndex, double? initialValue, Workout workout) {
+    WorkoutInputService.showRpePicker(
+      context: context,
+      exerciseIndex: exerciseIndex,
+      setIndex: setIndex,
+      initialValue: initialValue,
+      workout: workout,
+      onRpeSaved: (exerciseIndex, setIndex, rpe, workout) {
+        _saveRpe(exerciseIndex, setIndex, rpe, workout);
+      },
+    );
+  }
+
+  void _saveValue(String field, int exerciseIndex, int setIndex, String value, Workout workout) {
+    WorkoutStateService.saveValue(
+      field: field,
+      exerciseIndex: exerciseIndex,
+      setIndex: setIndex,
+      value: value,
+      workout: workout,
+      ref: ref,
+      context: context,
+      scrollController: _scrollController,
+      exerciseKeys: _exerciseKeys,
+      showNumpad: _showNumpad,
+      showRpePicker: _showRpePicker,
+    );
+  }
+
+  void _saveRpe(int exerciseIndex, int setIndex, double rpe, Workout workout) {
+    WorkoutStateService.saveRpe(
+      exerciseIndex: exerciseIndex,
+      setIndex: setIndex,
       rpe: rpe,
-      isCompleted: set.isCompleted,
+      workout: workout,
+      ref: ref,
+      context: context,
+      scrollController: _scrollController,
+      exerciseKeys: _exerciseKeys,
+      showNumpad: _showNumpad,
     );
-    
-    final updatedSets = List<WorkoutSet>.from(exercise.sets);
-    updatedSets[setIndex] = updatedSet;
-    
-    final updatedExercise = Exercise(
-      id: exercise.id,
-      name: exercise.name,
-      targetMuscle: exercise.targetMuscle,
-      sets: updatedSets,
-    );
-    
-    final updatedExercises = List<Exercise>.from(workout.exercises);
-    updatedExercises[exerciseIndex] = updatedExercise;
-    
-    final updatedWorkout = Workout(
-      id: workout.id,
-      serverId: workout.serverId,
-      name: workout.name,
-      scheduledDate: workout.scheduledDate,
-      isCompleted: workout.isCompleted,
-      exercises: updatedExercises,
-      isDirty: true,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Save to repository
-    ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
-    // Auto-advance: After RPE, move to next set
-    final nextSetIndex = setIndex + 1;
-    if (nextSetIndex < exercise.sets.length) {
-      // Move to next set in same exercise
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          final nextSet = exercise.sets[nextSetIndex];
-          _showNumpad('weight', exerciseIndex, nextSetIndex, nextSet.weight.toString(), updatedWorkout);
-        }
-      });
-    } else {
-      // Move to next exercise
-      final nextExerciseIndex = exerciseIndex + 1;
-      if (nextExerciseIndex < workout.exercises.length) {
-        final nextExercise = workout.exercises[nextExerciseIndex];
-        if (nextExercise.sets.isNotEmpty) {
-          // Scroll to next exercise before opening numpad
-          Future.delayed(const Duration(milliseconds: 400), () {
-            if (mounted && _scrollController.hasClients) {
-              final key = _exerciseKeys[nextExerciseIndex];
-              if (key != null && key.currentContext != null) {
-                Scrollable.ensureVisible(
-                  key.currentContext!,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  alignment: 0.1, // Slight offset from top
-                );
-              }
-            }
-          });
-          
-          Future.delayed(const Duration(milliseconds: 700), () {
-            if (mounted) {
-              final nextSet = nextExercise.sets[0];
-              _showNumpad('weight', nextExerciseIndex, 0, nextSet.weight.toString(), updatedWorkout);
-            }
-          });
-        }
-      }
-    }
   }
-  
-  void _deleteSet(int exerciseIndex, int setIndex, workout, Key setKey) {
-    AppHaptic.medium();
-    
-    // Store deleted set for undo
-    final exercise = workout.exercises[exerciseIndex];
-    final set = exercise.sets[setIndex];
-    _deletedSet = set;
-    _deletedExerciseIndex = exerciseIndex;
-    _deletedSetIndex = setIndex;
-    
-    // Remove set from exercise
-    final updatedExercise = Exercise(
-      id: exercise.id,
-      name: exercise.name,
-      targetMuscle: exercise.targetMuscle,
-      sets: List.from(exercise.sets)..removeAt(setIndex),
+
+  void _deleteSet(int exerciseIndex, int setIndex, Workout workout, Key setKey) {
+    final deletedSet = WorkoutStateService.deleteSet(
+      exerciseIndex: exerciseIndex,
+      setIndex: setIndex,
+      workout: workout,
+      ref: ref,
+      context: context,
     );
     
-    // Update workout
-    final updatedExercises = List<Exercise>.from(workout.exercises);
-    updatedExercises[exerciseIndex] = updatedExercise;
-    
-    final updatedWorkout = Workout(
-      id: workout.id,
-      serverId: workout.serverId,
-      name: workout.name,
-      scheduledDate: workout.scheduledDate,
-      isCompleted: workout.isCompleted,
-      exercises: updatedExercises,
-      isDirty: true,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Save to repository
-    ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
-    // Show undo snackbar
-    if (mounted) {
+    if (deletedSet != null && mounted) {
+      _deletedSet = deletedSet;
+      _deletedExerciseIndex = exerciseIndex;
+      _deletedSetIndex = setIndex;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Set deleted'),
@@ -388,7 +157,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       );
     }
   }
-  
+
   void _undoDeleteSet(Workout workout) {
     if (_deletedSet == null || 
         _deletedExerciseIndex == null || 
@@ -396,114 +165,29 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       return;
     }
     
-    AppHaptic.light();
-    
-    final exercise = workout.exercises[_deletedExerciseIndex!];
-    final updatedSets = List<WorkoutSet>.from(exercise.sets);
-    updatedSets.insert(_deletedSetIndex!, _deletedSet!);
-    
-    final updatedExercise = Exercise(
-      id: exercise.id,
-      name: exercise.name,
-      targetMuscle: exercise.targetMuscle,
-      sets: updatedSets,
+    WorkoutStateService.undoDeleteSet(
+      deletedSet: _deletedSet!,
+      exerciseIndex: _deletedExerciseIndex!,
+      setIndex: _deletedSetIndex!,
+      workout: workout,
+      ref: ref,
     );
     
-    final updatedExercises = List<Exercise>.from(workout.exercises);
-    updatedExercises[_deletedExerciseIndex!] = updatedExercise;
-    
-    final updatedWorkout = Workout(
-      id: workout.id,
-      serverId: workout.serverId,
-      name: workout.name,
-      scheduledDate: workout.scheduledDate,
-      isCompleted: workout.isCompleted,
-      exercises: updatedExercises,
-      isDirty: true,
-      updatedAt: DateTime.now(),
-    );
-    
-    ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
-    // Clear deleted set info
     _deletedSet = null;
     _deletedExerciseIndex = null;
     _deletedSetIndex = null;
   }
 
-  /// Check if exercise is completed (ALL sets must be completed)
-  bool _isExerciseCompleted(Exercise exercise) {
-    debugPrint('[WorkoutRunner:CheckboxCompletion] Checking exercise "${exercise.name}" completion status');
-    if (exercise.sets.isEmpty) {
-      debugPrint('[WorkoutRunner:CheckboxCompletion] Exercise has no sets - Not completed');
-      return false;
-    }
-    final isCompleted = exercise.sets.every((set) => set.isCompleted);
-    debugPrint('[WorkoutRunner:CheckboxCompletion] Exercise "${exercise.name}" - ${exercise.sets.where((s) => s.isCompleted).length}/${exercise.sets.length} sets completed - Overall: $isCompleted');
-    return isCompleted;
-  }
-
-  /// Toggle exercise completion - toggles ALL sets in the exercise
-  Future<void> _toggleExerciseCompletion(int exerciseIndex, Workout workout) async {
-    AppHaptic.selection();
-    
-    final exercise = workout.exercises[exerciseIndex];
-    final isCurrentlyCompleted = _isExerciseCompleted(exercise);
-    final newCompletedState = !isCurrentlyCompleted;
-    
-    debugPrint('[WorkoutRunner:CheckboxCompletion] Exercise $exerciseIndex toggle initiated - Current state: $isCurrentlyCompleted');
-    debugPrint('[WorkoutRunner:CheckboxCompletion] Updating ${exercise.sets.length} sets to $newCompletedState');
-    
-    // Create updated sets with new completion state
-    final updatedSets = exercise.sets.map((set) => WorkoutSet(
-      id: set.id,
-      weight: set.weight,
-      reps: set.reps,
-      rpe: set.rpe,
-      isCompleted: newCompletedState,
-    )).toList();
-    
-    // Create updated exercise
-    final updatedExercise = Exercise(
-      id: exercise.id,
-      name: exercise.name,
-      targetMuscle: exercise.targetMuscle,
-      sets: updatedSets,
-      category: exercise.category,
-      equipment: exercise.equipment,
-      instructions: exercise.instructions,
-    );
-    
-    // Create updated workout
-    final updatedExercises = List<Exercise>.from(workout.exercises);
-    updatedExercises[exerciseIndex] = updatedExercise;
-    
-    final updatedWorkout = Workout(
-      id: workout.id,
-      serverId: workout.serverId,
-      name: workout.name,
-      scheduledDate: workout.scheduledDate,
-      isCompleted: workout.isCompleted,
-      exercises: updatedExercises,
-      isDirty: true,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Fast completion validation (only for first exercise, only once)
-    if (!_hasShownFastCompletionMessage && 
-        exerciseIndex == 0 && 
-        newCompletedState == true &&
-        _workoutStartTime != null) {
-      
-      final duration = DateTime.now().difference(_workoutStartTime!);
-      debugPrint('[WorkoutRunner:FastCompletion] Workout duration: ${duration.inSeconds}s - Threshold: 30s');
-      
-      if (duration.inSeconds < 30) {
-        _hasShownFastCompletionMessage = true;
-        debugPrint('[WorkoutRunner:FastCompletion] Fast completion detected - Showing warning');
-        
-        // Show friendly humorous warning
-        if (mounted) {
+  void _toggleExerciseCompletion(int exerciseIndex, Workout workout) {
+    WorkoutStateService.toggleExerciseCompletion(
+      exerciseIndex: exerciseIndex,
+      workout: workout,
+      ref: ref,
+      context: context,
+      workoutStartTime: _workoutStartTime,
+      onFastCompletion: (shouldShow) {
+        if (shouldShow && !_hasShownFastCompletionMessage && mounted) {
+          _hasShownFastCompletionMessage = true;
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -516,91 +200,29 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
             }
           });
         }
-      }
-    }
-    
-    try {
-      // Optimistic UI update + save to repository
-      ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-      debugPrint('[WorkoutRunner:CheckboxCompletion] Isar DB update SUCCESS');
-      
-      // Trigger background sync (non-blocking)
-      // SyncManager will be called automatically
-      
-    } catch (e) {
-      // Rollback on error - revert to original state
-      debugPrint('[WorkoutRunner:CheckboxCompletion] ERROR - Rollback initiated: $e');
-      
-      // Revert the workout update
-      ref.read(workoutControllerProvider.notifier).updateWorkout(workout);
-      
-      // Show error message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating exercise: $e'),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
+      },
+    );
   }
 
   Future<void> _finishWorkout(Workout workout) async {
-    AppHaptic.heavy();
+    await WorkoutStateService.finishWorkout(
+      workout: workout,
+      ref: ref,
+      context: context,
+      confettiController: _confettiController!,
+    );
     
-    try {
-      // Mark workout as completed
-      final updatedWorkout = Workout(
-        id: workout.id,
-        serverId: workout.serverId,
-        name: workout.name,
-        scheduledDate: workout.scheduledDate,
-        isCompleted: true,
-        exercises: workout.exercises,
-        isDirty: true,
-        updatedAt: DateTime.now(),
-      );
-      
-      // Save to repository
-      await ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-      
-      // Show confetti animation
-      _confettiController?.play();
-      
-      // Show success message
+    // Navigate back after animation
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Workout completed! Great job!'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        context.go('/home');
       }
-      
-      // Navigate back after animation
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          context.go('/home');
-        }
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error finishing workout: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _timerService.dispose();
     _confettiController?.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -624,53 +246,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
 
     // Show message if no valid check-in
     if (!_hasValidCheckIn) {
-      return GradientBackground(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text('Check-In Required'),
-            backgroundColor: Colors.transparent,
-          ),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.camera_alt_rounded,
-                    size: 64,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Check-In Required',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'You must check in with GPS and photo before starting a workout.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  NeonButton(
-                    text: 'Go to Check-In',
-                    icon: Icons.camera_alt_rounded,
-                    onPressed: () {
-                      context.go('/check-in');
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
+      return const CheckInRequiredWidget();
     }
     
     return GradientBackground(
@@ -693,397 +269,75 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
                 orElse: () => workouts.first,
               );
               
+              // Initialize keys for all exercises if not already done
+              for (int i = 0; i < workout.exercises.length; i++) {
+                if (!_exerciseKeys.containsKey(i)) {
+                  _exerciseKeys[i] = GlobalKey();
+                }
+              }
+              
               return Column(
                 children: [
                   // Header
-                  _buildHeader(context, workout),
+                  WorkoutHeader(
+                    workout: workout,
+                    formattedTime: WorkoutTimerService.formatTime(_timerService.elapsedSeconds),
+                    isPaused: _timerService.isPaused,
+                    onPauseToggle: () {
+                      _timerService.togglePause();
+                      if (mounted) setState(() {});
+                    },
+                  ),
                   
                   // Exercise List
                   Expanded(
-                    child: _buildExerciseList(context, workout),
+                    child: workout.exercises.isEmpty
+                        ? Center(
+                            child: EmptyState(
+                              icon: Icons.fitness_center_rounded,
+                              title: 'No exercises',
+                              message: 'This workout has no exercises yet',
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: workout.exercises.length,
+                            itemBuilder: (context, index) {
+                              final exercise = workout.exercises[index];
+                              return ExerciseCard(
+                                exercise: exercise,
+                                exerciseIndex: index,
+                                workout: workout,
+                                exerciseKey: _exerciseKeys[index]!,
+                                isExerciseCompleted: WorkoutStateService.isExerciseCompleted(exercise),
+                                onToggleCompletion: _toggleExerciseCompletion,
+                                onSaveValue: _showNumpad,
+                                onSaveRpe: _showRpePicker,
+                                onDeleteSet: _deleteSet,
+                              );
+                            },
+                          ),
                   ),
                   
                   // Finish Button
-                  _buildFinishButton(context, workout),
+                  FinishWorkoutButton(
+                    workout: workout,
+                    confettiController: _confettiController!,
+                    onFinish: () => _finishWorkout(workout),
+                  ),
                 ],
               );
             },
-                  loading: () => const Center(
-                    child: ShimmerCard(height: 200),
-                  ),
+            loading: () => const Center(
+              child: ShimmerCard(height: 200),
+            ),
             error: (error, stack) => Center(
               child: Text('Error: $error'),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, workout) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(
-                  Icons.close_rounded,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  workout.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              IconButton(
-                onPressed: _togglePause,
-                icon: Icon(
-                  _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Timer
-          GradientCard(
-            gradient: AppGradients.primary,
-            padding: const EdgeInsets.all(16),
-            margin: EdgeInsets.zero,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.timer_rounded,
-                  color: AppColors.textPrimary,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  _formatTime(_elapsedSeconds),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExerciseList(BuildContext context, workout) {
-    if (workout.exercises.isEmpty) {
-      return Center(
-        child: EmptyState(
-          icon: Icons.fitness_center_rounded,
-          title: 'No exercises',
-          message: 'This workout has no exercises yet',
-        ),
-      );
-    }
-    
-    // Initialize keys for all exercises if not already done
-    for (int i = 0; i < workout.exercises.length; i++) {
-      if (!_exerciseKeys.containsKey(i)) {
-        _exerciseKeys[i] = GlobalKey();
-      }
-    }
-    
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: workout.exercises.length,
-      itemBuilder: (context, index) {
-        final exercise = workout.exercises[index];
-        return _buildExerciseCard(context, exercise, index, workout);
-      },
-    );
-  }
-
-  Widget _buildExerciseCard(BuildContext context, exercise, int exerciseIndex, workout) {
-    return GradientCard(
-      key: _exerciseKeys[exerciseIndex],
-      gradient: AppGradients.card,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Exercise Header with Checkbox
-          Row(
-            children: [
-              // Exercise Checkbox (PREČICA - toggles ALL sets)
-              GestureDetector(
-                onTap: () => _toggleExerciseCompletion(exerciseIndex, workout),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: _isExerciseCompleted(exercise)
-                        ? AppColors.success
-                        : Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _isExerciseCompleted(exercise)
-                          ? AppColors.success
-                          : AppColors.textSecondary,
-                      width: 2,
-                    ),
-                  ),
-                  child: _isExerciseCompleted(exercise)
-                      ? const Icon(
-                          Icons.check_rounded,
-                          color: AppColors.textPrimary,
-                          size: 20,
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Exercise Name
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      exercise.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      exercise.targetMuscle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Sets
-          ...exercise.sets.asMap().entries.map((entry) {
-            final setIndex = entry.key;
-            final set = entry.value;
-            
-            return _buildSetRow(context, set, exerciseIndex, setIndex, workout);
-          }),
-          
-          // Add Set Button
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () {
-              // TODO: Add new set
-              AppHaptic.selection();
-            },
-            icon: const Icon(
-              Icons.add_rounded,
-              color: AppColors.primary,
-            ),
-            label: Text(
-              'Add Set',
-              style: TextStyle(color: AppColors.primary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSetRow(BuildContext context, set, int exerciseIndex, int setIndex, workout) {
-    final setKey = Key('set_${exerciseIndex}_$setIndex');
-    
-    return Dismissible(
-      key: setKey,
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: AppColors.error,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(
-          Icons.delete_rounded,
-          color: AppColors.textPrimary,
-          size: 32,
-        ),
-      ),
-      onDismissed: (direction) {
-        _deleteSet(exerciseIndex, setIndex, workout, setKey);
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: set.isCompleted
-              ? AppColors.success.withValues(alpha: 0.1)
-              : AppColors.surface1,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: set.isCompleted
-                ? AppColors.success
-                : AppColors.primary.withValues(alpha: 0.3),
-            width: set.isCompleted ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            // Set Number
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                gradient: set.isCompleted
-                    ? AppGradients.success
-                    : AppGradients.card,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '${setIndex + 1}',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            
-            // Weight
-            Expanded(
-              child: _buildInputField(
-                context,
-                '${set.weight} kg',
-                () => _showNumpad('weight', exerciseIndex, setIndex, set.weight.toString(), workout),
-              ),
-            ),
-            const SizedBox(width: 8),
-            
-            // Reps
-            Expanded(
-              child: _buildInputField(
-                context,
-                '${set.reps} reps',
-                () => _showNumpad('reps', exerciseIndex, setIndex, set.reps.toString(), workout),
-              ),
-            ),
-            const SizedBox(width: 8),
-            
-            // RPE
-            Expanded(
-              child: _buildInputField(
-                context,
-                set.rpe != null ? 'RPE ${set.rpe}' : 'RPE',
-                () => _showRpePicker(exerciseIndex, setIndex, set.rpe, workout),
-              ),
-            ),
-            const SizedBox(width: 8),
-            
-            // Complete Checkbox
-            GestureDetector(
-              onTap: () {
-                AppHaptic.selection();
-                // TODO: Toggle set completion
-              },
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: set.isCompleted
-                      ? AppColors.success
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: set.isCompleted
-                        ? AppColors.success
-                        : AppColors.textSecondary,
-                    width: 2,
-                  ),
-                ),
-                child: set.isCompleted
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: AppColors.textPrimary,
-                        size: 20,
-                      )
-                    : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField(BuildContext context, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: AppGradients.card,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFinishButton(BuildContext context, Workout workout) {
-    return Stack(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                AppColors.background,
-              ],
-            ),
-          ),
-          child: NeonButton(
-            text: 'Finish Workout',
-            icon: Icons.check_circle_rounded,
-            onPressed: () => _finishWorkout(workout),
-            gradient: AppGradients.success,
-          ),
-        ),
-        // Confetti overlay
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConfettiWidget(
-            confettiController: _confettiController!,
-            blastDirection: 3.14 / 2, // Down
-            maxBlastForce: 5,
-            minBlastForce: 2,
-            emissionFrequency: 0.05,
-            numberOfParticles: 50,
-            gravity: 0.1,
-            shouldLoop: false,
-          ),
-        ),
-      ],
     );
   }
 }

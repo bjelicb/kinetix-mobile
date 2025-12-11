@@ -7,19 +7,24 @@ import '../../domain/entities/workout.dart';
 import '../../domain/entities/exercise.dart';
 import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/widgets/gradient_background.dart';
-import '../../presentation/widgets/gradient_card.dart';
 import '../../presentation/widgets/neon_button.dart';
-import '../../presentation/widgets/glass_bottom_sheet.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../services/workout_template_service.dart';
-import '../../services/exercise_library_service.dart';
 import '../../data/models/workout_template.dart';
 import 'package:uuid/uuid.dart';
+import '../widgets/workout_edit/workout_name_input_widget.dart';
+import '../widgets/workout_edit/scheduled_date_picker_widget.dart';
+import '../widgets/workout_edit/exercise_list_widget.dart';
+import '../widgets/workout_edit/template_selection_dialog.dart';
+import '../widgets/workout_edit/apply_template_dialog.dart';
+import 'workout_edit/services/workout_edit_service.dart';
+import 'workout_edit/services/workout_template_service.dart' as template_service;
+import 'workout_edit/utils/date_picker_utils.dart';
 
 class WorkoutEditPage extends ConsumerStatefulWidget {
   final String? workoutId; // null for create, workout id for edit
   final DateTime? selectedDate; // Optional initial date for new workouts
-  
+
   const WorkoutEditPage({super.key, this.workoutId, this.selectedDate});
 
   @override
@@ -47,14 +52,13 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
     setState(() => _isLoading = true);
     try {
       final workouts = await ref.read(workoutControllerProvider.future);
-      final workout = workouts.firstWhere(
-        (w) => w.id == widget.workoutId,
-        orElse: () => throw Exception('Workout not found'),
-      );
-      
-      _nameController.text = workout.name;
-      _selectedDate = workout.scheduledDate;
-      _exercises = List.from(workout.exercises);
+      final workout = WorkoutEditService.loadWorkout(widget.workoutId!, workouts);
+
+      if (workout != null) {
+        _nameController.text = workout.name;
+        _selectedDate = workout.scheduledDate;
+        _exercises = List.from(workout.exercises);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,34 +75,6 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
     }
   }
 
-  Future<void> _selectDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              onPrimary: AppColors.textPrimary,
-              surface: AppColors.surface,
-              onSurface: AppColors.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-      AppHaptic.light();
-    }
-  }
 
   Future<void> _addExercise() async {
     AppHaptic.selection();
@@ -113,63 +89,19 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
 
   Future<void> _selectTemplate() async {
     AppHaptic.selection();
-    
+
     // Only show template selection for new workouts
     if (widget.workoutId != null) {
       return;
     }
 
     final templates = await WorkoutTemplateService.instance.getAllTemplates();
-    
+
     if (!mounted) return;
 
-    final selectedTemplate = await GlassBottomSheet.show<WorkoutTemplate>(
+    final selectedTemplate = await TemplateSelectionDialog.show(
       context: context,
-      title: 'Select Template',
-      height: MediaQuery.of(context).size.height * 0.7,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: templates.length,
-        itemBuilder: (context, index) {
-          final template = templates[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: GradientCard(
-              padding: const EdgeInsets.all(16),
-              child: InkWell(
-                onTap: () {
-                  AppHaptic.medium();
-                  Navigator.of(context).pop(template);
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      template.name,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      template.description,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${template.exercises.length} exercises',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.primary,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+      templates: templates,
     );
 
     if (selectedTemplate != null) {
@@ -178,103 +110,42 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
   }
 
   Future<void> _applyTemplate(WorkoutTemplate template) async {
-    AppHaptic.medium();
-    
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    final confirmed = await ApplyTemplateDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          'Apply Template?',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        content: Text(
-          'This will replace your current exercises with the "${template.name}" template exercises.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              AppHaptic.medium();
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
+      templateName: template.name,
     );
 
     if (confirmed != true) return;
 
-    // Load exercise library
-    final exerciseLibrary = await ExerciseLibraryService.instance.loadExercises();
-    
-    // Convert template exercises to Exercise entities
-    final exercises = <Exercise>[];
-    for (final templateExercise in template.exercises) {
-      final exercise = exerciseLibrary.firstWhere(
-        (e) => e.id == templateExercise.exerciseId,
-        orElse: () => Exercise(
-          id: templateExercise.exerciseId,
-          name: templateExercise.name,
-          targetMuscle: '',
-          sets: List.generate(
-            templateExercise.defaultSets,
-            (index) => WorkoutSet(
-              id: const Uuid().v4(),
-              weight: templateExercise.defaultWeight ?? 0.0,
-              reps: templateExercise.defaultReps ?? 10,
-              rpe: null,
-              isCompleted: false,
-            ),
-          ),
-        ),
-      );
-      
-      // If exercise found, create sets from template
-      if (exerciseLibrary.any((e) => e.id == templateExercise.exerciseId)) {
-        exercises.add(Exercise(
-          id: exercise.id,
-          name: exercise.name,
-          targetMuscle: exercise.targetMuscle,
-          sets: List.generate(
-            templateExercise.defaultSets,
-            (index) => WorkoutSet(
-              id: const Uuid().v4(),
-              weight: templateExercise.defaultWeight ?? 0.0,
-              reps: templateExercise.defaultReps ?? 10,
-              rpe: null,
-              isCompleted: false,
-            ),
-          ),
-          category: exercise.category,
-          equipment: exercise.equipment,
-          instructions: exercise.instructions,
-        ));
-      }
-    }
+    try {
+      final exercises = await template_service.WorkoutTemplateEditService.applyTemplate(template);
 
-    setState(() {
-      _exercises = exercises;
-      if (_nameController.text.isEmpty) {
-        _nameController.text = template.name;
-      }
-    });
+      setState(() {
+        _exercises = exercises;
+        if (_nameController.text.isEmpty) {
+          _nameController.text = template.name;
+        }
+      });
 
-    AppHaptic.heavy();
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Template "${template.name}" applied successfully'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      AppHaptic.heavy();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Template "${template.name}" applied successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error applying template: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -290,10 +161,15 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
       return;
     }
 
-    if (_exercises.isEmpty) {
+    final validationError = WorkoutEditService.validateWorkout(
+      _nameController.text,
+      _exercises,
+    );
+
+    if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one exercise'),
+        SnackBar(
+          content: Text(validationError),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -314,11 +190,11 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
         updatedAt: DateTime.now(),
       );
 
-      if (widget.workoutId != null) {
-        await ref.read(workoutControllerProvider.notifier).updateWorkout(workout);
-      } else {
-        await ref.read(workoutControllerProvider.notifier).createWorkout(workout);
-      }
+      await WorkoutEditService.saveWorkout(
+        workout,
+        widget.workoutId != null,
+        ref,
+      );
 
       if (mounted) {
         AppHaptic.heavy();
@@ -395,83 +271,21 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                // Workout Name
-                GradientCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Workout Name',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _nameController,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                        decoration: InputDecoration(
-                          hintText: 'Enter workout name',
-                          hintStyle: TextStyle(color: AppColors.textSecondary),
-                          filled: true,
-                          fillColor: AppColors.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a workout name';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
+                WorkoutNameInputWidget(controller: _nameController),
+                const SizedBox(height: 16),
+                ScheduledDatePickerWidget(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) async {
+                    final picked = await DatePickerUtils.showDatePickerDialog(context, date);
+                    if (picked != null) {
+                      setState(() {
+                        _selectedDate = picked;
+                      });
+                      AppHaptic.light();
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
-                
-                // Scheduled Date
-                GradientCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Scheduled Date',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      InkWell(
-                        onTap: _selectDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                color: AppColors.primary,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
                 // Start from Template (only for new workouts)
                 if (widget.workoutId == null)
                   Column(
@@ -495,112 +309,12 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
                       const SizedBox(height: 16),
                     ],
                   ),
-                
-                // Exercises List
-                GradientCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Exercises',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          TextButton.icon(
-                            onPressed: _addExercise,
-                            icon: const Icon(
-                              Icons.add_rounded,
-                              color: AppColors.primary,
-                            ),
-                            label: const Text('Add Exercise'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      if (_exercises.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.fitness_center_rounded,
-                                  size: 48,
-                                  color: AppColors.textSecondary,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No exercises added',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        ..._exercises.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final exercise = entry.value;
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        exercise.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        exercise.targetMuscle,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_rounded,
-                                    color: AppColors.error,
-                                  ),
-                                  onPressed: () => _removeExercise(index),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                    ],
-                  ),
+                ExerciseListWidget(
+                  exercises: _exercises,
+                  onAddExercise: _addExercise,
+                  onRemoveExercise: _removeExercise,
                 ),
                 const SizedBox(height: 32),
-                
-                // Save Button
                 NeonButton(
                   text: widget.workoutId != null ? 'Update Workout' : 'Create Workout',
                   icon: widget.workoutId != null
@@ -618,4 +332,3 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
     );
   }
 }
-

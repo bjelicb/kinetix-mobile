@@ -92,9 +92,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo_hex.png"
+  image_path: "assets/images/zero_option_logo.png"
   adaptive_icon_background: "#0A0A0A"
-  adaptive_icon_foreground: "assets/images/logo_hex.png"
+  adaptive_icon_foreground: "assets/images/zero_option_logo.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
