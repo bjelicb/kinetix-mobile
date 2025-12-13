@@ -27,23 +27,33 @@ const WorkoutCollectionSchema = CollectionSchema(
       name: r'isDirty',
       type: IsarType.bool,
     ),
-    r'name': PropertySchema(
+    r'isMissed': PropertySchema(
       id: 2,
+      name: r'isMissed',
+      type: IsarType.bool,
+    ),
+    r'isRestDay': PropertySchema(
+      id: 3,
+      name: r'isRestDay',
+      type: IsarType.bool,
+    ),
+    r'name': PropertySchema(
+      id: 4,
       name: r'name',
       type: IsarType.string,
     ),
     r'scheduledDate': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'scheduledDate',
       type: IsarType.dateTime,
     ),
     r'serverId': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'serverId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -102,10 +112,12 @@ void _workoutCollectionSerialize(
 ) {
   writer.writeBool(offsets[0], object.isCompleted);
   writer.writeBool(offsets[1], object.isDirty);
-  writer.writeString(offsets[2], object.name);
-  writer.writeDateTime(offsets[3], object.scheduledDate);
-  writer.writeString(offsets[4], object.serverId);
-  writer.writeDateTime(offsets[5], object.updatedAt);
+  writer.writeBool(offsets[2], object.isMissed);
+  writer.writeBool(offsets[3], object.isRestDay);
+  writer.writeString(offsets[4], object.name);
+  writer.writeDateTime(offsets[5], object.scheduledDate);
+  writer.writeString(offsets[6], object.serverId);
+  writer.writeDateTime(offsets[7], object.updatedAt);
 }
 
 WorkoutCollection _workoutCollectionDeserialize(
@@ -118,10 +130,12 @@ WorkoutCollection _workoutCollectionDeserialize(
   object.id = id;
   object.isCompleted = reader.readBool(offsets[0]);
   object.isDirty = reader.readBool(offsets[1]);
-  object.name = reader.readString(offsets[2]);
-  object.scheduledDate = reader.readDateTime(offsets[3]);
-  object.serverId = reader.readString(offsets[4]);
-  object.updatedAt = reader.readDateTime(offsets[5]);
+  object.isMissed = reader.readBool(offsets[2]);
+  object.isRestDay = reader.readBool(offsets[3]);
+  object.name = reader.readString(offsets[4]);
+  object.scheduledDate = reader.readDateTime(offsets[5]);
+  object.serverId = reader.readString(offsets[6]);
+  object.updatedAt = reader.readDateTime(offsets[7]);
   return object;
 }
 
@@ -137,12 +151,16 @@ P _workoutCollectionDeserializeProp<P>(
     case 1:
       return (reader.readBool(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 3:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
+      return (reader.readDateTime(offset)) as P;
+    case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -419,6 +437,26 @@ extension WorkoutCollectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isDirty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      isMissedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isMissed',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      isRestDayEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isRestDay',
         value: value,
       ));
     });
@@ -907,6 +945,34 @@ extension WorkoutCollectionQuerySortBy
   }
 
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByIsMissed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMissed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByIsMissedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMissed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByIsRestDay() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isRestDay', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByIsRestDayDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isRestDay', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
       sortByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -1007,6 +1073,34 @@ extension WorkoutCollectionQuerySortThenBy
   }
 
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByIsMissed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMissed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByIsMissedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMissed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByIsRestDay() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isRestDay', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByIsRestDayDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isRestDay', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
       thenByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -1079,6 +1173,20 @@ extension WorkoutCollectionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct>
+      distinctByIsMissed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isMissed');
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct>
+      distinctByIsRestDay() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isRestDay');
+    });
+  }
+
   QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct> distinctByName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1126,6 +1234,18 @@ extension WorkoutCollectionQueryProperty
   QueryBuilder<WorkoutCollection, bool, QQueryOperations> isDirtyProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isDirty');
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, bool, QQueryOperations> isMissedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isMissed');
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, bool, QQueryOperations> isRestDayProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isRestDay');
     });
   }
 

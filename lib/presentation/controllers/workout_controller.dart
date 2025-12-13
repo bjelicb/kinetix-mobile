@@ -13,7 +13,7 @@ part 'workout_controller.g.dart';
 @riverpod
 class WorkoutController extends _$WorkoutController {
   late WorkoutRepository _repository;
-  
+
   @override
   FutureOr<List<Workout>> build() async {
     final storage = FlutterSecureStorage();
@@ -21,28 +21,28 @@ class WorkoutController extends _$WorkoutController {
     final dio = Dio();
     final remoteDataSource = RemoteDataSource(dio, storage);
     _repository = WorkoutRepositoryImpl(localDataSource, remoteDataSource);
-    
+
     return await _repository.getWorkouts();
   }
-  
+
   Future<void> logSet(String workoutId, String exerciseId, double weight, int reps, double? rpe) async {
     await _repository.logSet(workoutId, exerciseId, weight, reps, rpe);
     // Refresh workouts
     state = AsyncValue.data(await _repository.getWorkouts());
   }
-  
+
   Future<Workout> createWorkout(Workout workout) async {
     final created = await _repository.createWorkout(workout);
     state = AsyncValue.data(await _repository.getWorkouts());
     return created;
   }
-  
+
   Future<Workout> updateWorkout(Workout workout) async {
     final updated = await _repository.updateWorkout(workout);
     state = AsyncValue.data(await _repository.getWorkouts());
     return updated;
   }
-  
+
   Future<void> deleteWorkout(String id) async {
     await _repository.deleteWorkout(id);
     state = AsyncValue.data(await _repository.getWorkouts());
@@ -60,8 +60,7 @@ class WorkoutController extends _$WorkoutController {
       final query = searchQuery.toLowerCase();
       filtered = filtered.where((workout) {
         return workout.name.toLowerCase().contains(query) ||
-            workout.exercises.any((exercise) =>
-                exercise.name.toLowerCase().contains(query));
+            workout.exercises.any((exercise) => exercise.name.toLowerCase().contains(query));
       }).toList();
     }
 
@@ -69,7 +68,7 @@ class WorkoutController extends _$WorkoutController {
     if (filterOptions?.dateFilter != null) {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      
+
       switch (filterOptions!.dateFilter!) {
         case DateFilter.today:
           filtered = filtered.where((workout) {
@@ -104,9 +103,7 @@ class WorkoutController extends _$WorkoutController {
               return workout.scheduledDate.isAfter(
                     filterOptions.customDateRange!.start.subtract(const Duration(days: 1)),
                   ) &&
-                  workout.scheduledDate.isBefore(
-                    filterOptions.customDateRange!.end.add(const Duration(days: 1)),
-                  );
+                  workout.scheduledDate.isBefore(filterOptions.customDateRange!.end.add(const Duration(days: 1)));
             }).toList();
           }
           break;
@@ -131,12 +128,10 @@ class WorkoutController extends _$WorkoutController {
     // Apply muscle group filter
     if (filterOptions?.muscleGroup != null) {
       filtered = filtered.where((workout) {
-        return workout.exercises.any((exercise) =>
-            exercise.targetMuscle == filterOptions!.muscleGroup);
+        return workout.exercises.any((exercise) => exercise.targetMuscle == filterOptions!.muscleGroup);
       }).toList();
     }
 
     return filtered;
   }
 }
-

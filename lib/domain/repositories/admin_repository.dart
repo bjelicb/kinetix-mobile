@@ -21,6 +21,7 @@ abstract class AdminRepository {
   Future<void> deletePlan(String planId);
   Future<Map<String, dynamic>> assignPlanToClients(String planId, List<String> clientIds, DateTime startDate);
   Future<Map<String, dynamic>> duplicatePlan(String planId);
+  Future<void> cancelPlan(String planId, String clientId);
   Future<List<Map<String, dynamic>>> getAllWorkouts();
   Future<Map<String, dynamic>> getWorkoutStats();
   Future<Map<String, dynamic>> updateUser({

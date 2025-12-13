@@ -12,7 +12,7 @@ part 'auth_controller.g.dart';
 @riverpod
 class AuthController extends _$AuthController {
   late AuthRepository _repository;
-  
+
   @override
   FutureOr<User?> build() async {
     final storage = FlutterSecureStorage();
@@ -21,10 +21,10 @@ class AuthController extends _$AuthController {
     final remoteDataSource = RemoteDataSource(dio, storage);
     // Use real backend
     _repository = AuthRepositoryImpl(localDataSource, remoteDataSource, storage);
-    
+
     return await _repository.getCurrentUser();
   }
-  
+
   Future<User> login(String email, String password) async {
     state = const AsyncValue.loading();
     try {
@@ -36,7 +36,7 @@ class AuthController extends _$AuthController {
       rethrow;
     }
   }
-  
+
   Future<User> register(String email, String password, String name, String role) async {
     state = const AsyncValue.loading();
     try {
@@ -48,7 +48,7 @@ class AuthController extends _$AuthController {
       rethrow;
     }
   }
-  
+
   Future<void> logout() async {
     state = const AsyncValue.loading();
     try {
@@ -60,4 +60,3 @@ class AuthController extends _$AuthController {
     }
   }
 }
-

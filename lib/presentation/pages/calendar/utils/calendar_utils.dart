@@ -1,5 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../../domain/entities/workout.dart';
+import '../../../../domain/entities/plan.dart';
+import '../../../../core/theme/app_colors.dart';
+
+/// Workout status enum for calendar display
+enum WorkoutStatus { completed, missed, pending, restDay, locked }
 
 /// Calendar utility functions
 class CalendarUtils {
@@ -37,7 +43,7 @@ class CalendarUtils {
       'September',
       'October',
       'November',
-      'December'
+      'December',
     ];
     return months[month - 1];
   }
@@ -52,11 +58,7 @@ class CalendarUtils {
   static Map<DateTime, List<Workout>> groupWorkoutsByDate(List<Workout> workouts) {
     final workoutsByDate = <DateTime, List<Workout>>{};
     for (final workout in workouts) {
-      final date = DateTime(
-        workout.scheduledDate.year,
-        workout.scheduledDate.month,
-        workout.scheduledDate.day,
-      );
+      final date = DateTime(workout.scheduledDate.year, workout.scheduledDate.month, workout.scheduledDate.day);
       workoutsByDate.putIfAbsent(date, () => []).add(workout);
     }
     return workoutsByDate;
@@ -67,13 +69,49 @@ class CalendarUtils {
     final selectedDate = DateTime(date.year, date.month, date.day);
 
     return workouts.where((workout) {
-      final workoutDate = DateTime(
-        workout.scheduledDate.year,
-        workout.scheduledDate.month,
-        workout.scheduledDate.day,
-      );
+      final workoutDate = DateTime(workout.scheduledDate.year, workout.scheduledDate.month, workout.scheduledDate.day);
       return isSameDay(selectedDate, workoutDate);
     }).toList();
   }
-}
 
+  /// Get workout status for a specific date
+  static WorkoutStatus getWorkoutStatus(Workout? workout, DateTime date, Plan? activePlan) {
+    if (workout != null) {
+      if (workout.isRestDay) {
+        return WorkoutStatus.restDay;
+      }
+      if (workout.isCompleted) {
+        return WorkoutStatus.completed;
+      }
+      if (workout.isMissed) {
+        return WorkoutStatus.missed;
+      }
+      return WorkoutStatus.pending;
+    }
+
+    // No workout log exists
+    // If there's an active plan, the date might be pending (workout not yet logged)
+    // If no active plan, the date is locked
+    if (activePlan != null) {
+      return WorkoutStatus.pending;
+    }
+
+    return WorkoutStatus.locked;
+  }
+
+  /// Get color for workout status
+  static Color getStatusColor(WorkoutStatus status) {
+    switch (status) {
+      case WorkoutStatus.completed:
+        return AppColors.success; // Green
+      case WorkoutStatus.missed:
+        return AppColors.error; // Red
+      case WorkoutStatus.pending:
+        return AppColors.warning; // Orange
+      case WorkoutStatus.restDay:
+        return AppColors.textSecondary; // Gray
+      case WorkoutStatus.locked:
+        return AppColors.textSecondary.withValues(alpha: 0.3); // Light gray
+    }
+  }
+}

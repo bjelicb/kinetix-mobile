@@ -1,0 +1,29 @@
+{
+  "recommendations": [
+    // Glavna Flutter ekstenzija - OBAVEZNA
+    "dart-code.dart-code",
+    "dart-code.flutter",
+    
+    // Code Quality & Linting
+    "dart-code.flutter-lints",
+    
+    // Productivity Extensions
+    "usernamehw.errorlens",           // Prikazuje greške inline
+    "ms-vscode.vscode-json",          // JSON podrška
+    "redhat.vscode-yaml",             // YAML podrška (za pubspec.yaml)
+    
+    // Git & Version Control
+    "eamodio.gitlens",                // Napredna Git integracija
+    
+    // UI/UX Helpers
+    "pkief.material-icon-theme",      // Lepše ikone za fajlove
+    "bradlc.vscode-tailwindcss",      // Ako koristiš Tailwind (opciono)
+    
+    // Code Formatting
+    "editorconfig.editorconfig",      // EditorConfig podrška
+    
+    // Testing
+    "dart-code.dart-code-test-adapter" // Test runner za Dart/Flutter
+  ]
+}
+

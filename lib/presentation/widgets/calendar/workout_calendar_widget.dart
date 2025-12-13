@@ -11,10 +11,10 @@ import '../gradient_card.dart';
 
 /// Event marker colors based on workout status
 enum WorkoutStatus {
-  completed,  // Green
-  missed,     // Red
-  pending,    // Orange
-  rest,       // Gray
+  completed, // Green
+  missed, // Red
+  pending, // Orange
+  rest, // Gray
 }
 
 class WorkoutCalendarWidget extends ConsumerStatefulWidget {
@@ -38,54 +38,54 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
 
   Future<void> _loadWorkouts() async {
     setState(() => _isLoading = true);
-    
+
     final month = _focusedDay.month;
     final year = _focusedDay.year;
-    
+
     debugPrint('[Calendar:Load] Loading workouts for month: $month/$year');
-    
+
     try {
       // Load workouts from local DB
       final localDataSource = LocalDataSource();
       final allWorkouts = await localDataSource.getWorkouts();
-      
+
       // Convert WorkoutCollection to Workout entities
       final workouts = <Workout>[];
       for (final workoutCol in allWorkouts) {
         final exercises = await localDataSource.getExercisesForWorkout(workoutCol.id);
-        
+
         // Manual conversion since fromCollection doesn't exist
         final workout = Workout(
           id: workoutCol.serverId,
           name: workoutCol.name,
           scheduledDate: workoutCol.scheduledDate,
           isCompleted: workoutCol.isCompleted,
+          isMissed: workoutCol.isMissed,
+          isRestDay: workoutCol.isRestDay,
           exercises: exercises.map((e) {
             return Exercise(
               id: e.id.toString(),
               name: e.name,
               targetMuscle: 'Unknown',
-              sets: e.sets.map((s) => WorkoutSet(
-                id: s.id,
-                weight: s.weight,
-                reps: s.reps,
-                rpe: s.rpe,
-                isCompleted: s.isCompleted,
-              )).toList(),
+              sets: e.sets
+                  .map(
+                    (s) => WorkoutSet(id: s.id, weight: s.weight, reps: s.reps, rpe: s.rpe, isCompleted: s.isCompleted),
+                  )
+                  .toList(),
             );
           }).toList(),
           isDirty: workoutCol.isDirty,
           updatedAt: workoutCol.updatedAt,
         );
-        
+
         workouts.add(workout);
       }
-      
+
       // Filter workouts for the selected month
       final monthWorkouts = workouts.where((workout) {
         return workout.scheduledDate.year == year && workout.scheduledDate.month == month;
       }).toList();
-      
+
       // Group workouts by date
       _workoutsByDate = {};
       for (final workout in monthWorkouts) {
@@ -94,16 +94,17 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
           workout.scheduledDate.month,
           workout.scheduledDate.day,
         );
-        
+
         if (_workoutsByDate.containsKey(normalizedDate)) {
           _workoutsByDate[normalizedDate]!.add(workout);
         } else {
           _workoutsByDate[normalizedDate] = [workout];
         }
       }
-      
-      debugPrint('[Calendar:Load] ✓ Loaded ${_workoutsByDate.length} days with workouts (${monthWorkouts.length} total workouts)');
-      
+
+      debugPrint(
+        '[Calendar:Load] ✓ Loaded ${_workoutsByDate.length} days with workouts (${monthWorkouts.length} total workouts)',
+      );
     } catch (e) {
       debugPrint('[Calendar:Load] ✗ Error loading workouts: $e');
       _workoutsByDate = {};
@@ -125,7 +126,7 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
     }
     final now = DateTime.now();
     final dayDate = DateTime(day.year, day.month, day.day);
-    
+
     if (dayDate.isBefore(now)) {
       return WorkoutStatus.missed;
     }
@@ -151,7 +152,7 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
         _selectedDay = selectedDay;
         _focusedDay = focusedDay;
       });
-      
+
       final workouts = _getEventsForDay(selectedDay);
       if (workouts.isNotEmpty) {
         AppHaptic.selection();
@@ -169,13 +170,10 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
       child: Column(
         children: [
           // Calendar Grid (includes header)
-          if (_isLoading)
-            const Center(child: CircularProgressIndicator())
-          else
-            _buildCalendarGrid(),
-          
+          if (_isLoading) const Center(child: CircularProgressIndicator()) else _buildCalendarGrid(),
+
           const SizedBox(height: 16),
-          
+
           // Legend
           _buildLegend(),
         ],
@@ -193,17 +191,9 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
       startingDayOfWeek: StartingDayOfWeek.monday,
       calendarStyle: CalendarStyle(
         outsideDaysVisible: false,
-        todayDecoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.3),
-          shape: BoxShape.circle,
-        ),
-        selectedDecoration: BoxDecoration(
-          color: AppColors.primary,
-          shape: BoxShape.circle,
-        ),
-        markerDecoration: const BoxDecoration(
-          shape: BoxShape.circle,
-        ),
+        todayDecoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.3), shape: BoxShape.circle),
+        selectedDecoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+        markerDecoration: const BoxDecoration(shape: BoxShape.circle),
         markersMaxCount: 1,
         markerSize: 6,
         markerMargin: const EdgeInsets.symmetric(horizontal: 0.5),
@@ -213,10 +203,7 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
         titleCentered: true,
         leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.textPrimary),
         rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.textPrimary),
-        titleTextStyle: TextStyle(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
+        titleTextStyle: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
       ),
       daysOfWeekStyle: DaysOfWeekStyle(
         weekdayStyle: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold),
@@ -225,19 +212,16 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
       calendarBuilders: CalendarBuilders(
         markerBuilder: (context, date, events) {
           if (events.isEmpty) return null;
-          
+
           final workout = events.first;
           final status = _getWorkoutStatus(workout, date);
-          
+
           return Positioned(
             bottom: 1,
             child: Container(
               width: 6,
               height: 6,
-              decoration: BoxDecoration(
-                color: _getStatusColor(status),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: _getStatusColor(status), shape: BoxShape.circle),
             ),
           );
         },
@@ -268,21 +252,11 @@ class _WorkoutCalendarWidgetState extends ConsumerState<WorkoutCalendarWidget> {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 10,
-          ),
-        ),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
       ],
     );
   }
 }
-

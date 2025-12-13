@@ -3,26 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/theme/app_colors.dart';
+import '../../domain/entities/workout.dart';
 import '../../presentation/controllers/workout_controller.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import '../../presentation/widgets/gradient_background.dart';
-import '../../presentation/widgets/search_bar.dart' as kinetix_search;
-import '../../presentation/widgets/filter_bottom_sheet.dart';
+// Search and filter removed - not needed on dashboard
 import '../../presentation/widgets/plans/current_plan_card.dart';
 import '../../presentation/widgets/balance_card.dart';
 import '../../presentation/widgets/weigh_in_card.dart';
 import '../../presentation/widgets/ai_messages_preview_card.dart';
 import '../../presentation/widgets/unlock_next_week_button.dart';
-import '../../presentation/widgets/calendar/workout_calendar_widget.dart';
+// WorkoutCalendarWidget removed - use Calendar page instead
 import '../../presentation/widgets/nutrition_summary_card.dart';
-import '../../core/utils/haptic_feedback.dart';
+// Haptic feedback removed - not needed without interactive elements
 import '../../data/datasources/remote_data_source.dart';
 import 'dashboard/services/dashboard_data_service.dart';
 import 'dashboard/services/paywall_service.dart';
 import '../widgets/dashboard/dashboard_header_widget.dart';
 import '../widgets/dashboard/dashboard_quick_stats_widget.dart';
 import '../widgets/dashboard/todays_mission_widget.dart';
-import '../widgets/dashboard/dashboard_client_content_widget.dart';
+// DashboardClientContent removed - Recent Workouts not needed
 import '../widgets/dashboard/dashboard_trainer_content_widget.dart';
 import '../widgets/dashboard/dashboard_state_widgets.dart';
 
@@ -34,14 +34,12 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
-  String? _searchQuery;
-  FilterOptions _filterOptions = FilterOptions();
-  List<String> _availableMuscleGroups = [];
+  // Search and filter removed - not needed on dashboard
   Map<String, dynamic>? _balanceData;
   bool _loadingBalance = false;
   Map<String, dynamic>? _weighInData;
   bool _loadingWeighIn = false;
-  
+
   late final RemoteDataSource _remoteDataSource;
 
   @override
@@ -50,8 +48,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final storage = FlutterSecureStorage();
     final dio = Dio();
     _remoteDataSource = RemoteDataSource(dio, storage);
-    
-    _loadMuscleGroups();
+
+    // _loadMuscleGroups(); // Removed - not needed
     _loadBalance().then((_) => _checkPaywall());
     _loadWeighIn();
   }
@@ -59,7 +57,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Future<void> _checkPaywall() async {
     final user = ref.read(authControllerProvider).valueOrNull;
     final balanceData = _balanceData;
-    
+
     if (mounted) {
       PaywallService.checkPaywall(context, balanceData, user);
     }
@@ -67,13 +65,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Future<void> _loadBalance() async {
     final user = ref.read(authControllerProvider).valueOrNull;
-    
+
     setState(() {
       _loadingBalance = true;
     });
 
     final balanceData = await DashboardDataService.loadBalance(_remoteDataSource, user);
-    
+
     if (mounted) {
       setState(() {
         _balanceData = balanceData;
@@ -84,13 +82,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Future<void> _loadWeighIn() async {
     final user = ref.read(authControllerProvider).valueOrNull;
-    
+
     setState(() {
       _loadingWeighIn = true;
     });
 
     final weighInData = await DashboardDataService.loadWeighIn(_remoteDataSource, user);
-    
+
     if (mounted) {
       setState(() {
         _weighInData = weighInData;
@@ -99,46 +97,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     }
   }
 
-  Future<void> _loadMuscleGroups() async {
-    final muscleGroups = await DashboardDataService.loadMuscleGroups();
-    if (mounted) {
-      setState(() {
-        _availableMuscleGroups = muscleGroups;
-      });
-    }
-  }
+  // Search and filter methods removed - not needed on dashboard
 
-  Future<void> _showFilterSheet() async {
-    AppHaptic.selection();
-    final result = await FilterBottomSheet.show(
-      context: context,
-      initialFilters: _filterOptions,
-      availableMuscleGroups: _availableMuscleGroups,
-      availableExercises: [],
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        _filterOptions = result;
-      });
-    }
-  }
-
-  void _handleDeleteWorkout(String workoutId) {
-    // Workout deletion is handled in the dialog callback
-    // This method can be used for additional cleanup if needed
-  }
+  // _handleDeleteWorkout removed - not needed without Recent Workouts section
 
   @override
   Widget build(BuildContext context) {
     final workoutsState = ref.watch(workoutControllerProvider);
     final authState = ref.watch(authControllerProvider);
-
-    // Get filtered workouts
-    final filteredWorkouts = ref.read(workoutControllerProvider.notifier).filterWorkouts(
-      _searchQuery,
-      _filterOptions.hasActiveFilters ? _filterOptions : null,
-    );
 
     return GradientBackground(
       child: Scaffold(
@@ -148,7 +114,19 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             data: (workouts) {
               final user = authState.valueOrNull;
               final isTrainer = user?.role == 'TRAINER';
-              final todayWorkout = filteredWorkouts.isNotEmpty ? filteredWorkouts.first : null;
+
+              // Get today's workout
+              final today = DateTime.now();
+              final todayDate = DateTime(today.year, today.month, today.day);
+              Workout? todayWorkout;
+              try {
+                todayWorkout = workouts.firstWhere((w) {
+                  final workoutDate = DateTime(w.scheduledDate.year, w.scheduledDate.month, w.scheduledDate.day);
+                  return workoutDate.isAtSameMomentAs(todayDate);
+                });
+              } catch (e) {
+                todayWorkout = null;
+              }
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -160,32 +138,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 child: CustomScrollView(
                   slivers: [
                     // Header
-                    SliverToBoxAdapter(
-                      child: DashboardHeader(user: user),
-                    ),
+                    SliverToBoxAdapter(child: DashboardHeader(user: user)),
 
-                    // Search Bar
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                        child: kinetix_search.SearchBar(
-                          hintText: 'Search workouts...',
-                          onChanged: (query) {
-                            setState(() {
-                              _searchQuery = query.isEmpty ? null : query;
-                            });
-                          },
-                          onFilterTap: _showFilterSheet,
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+                    // Search Bar removed - not needed on dashboard
 
                     // Current Plan Card (Client only)
                     if (!isTrainer && user?.role == 'CLIENT') ...[
-                      const SliverToBoxAdapter(
-                        child: CurrentPlanCard(),
-                      ),
+                      const SliverToBoxAdapter(child: CurrentPlanCard()),
                       const SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -203,14 +162,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                 child: Center(child: CircularProgressIndicator()),
                               )
                             : _balanceData != null
-                                ? BalanceCard(
-                                    balance: (_balanceData!['balance'] as num?)?.toDouble() ?? 0.0,
-                                    monthlyBalance: (_balanceData!['monthlyBalance'] as num?)?.toDouble() ?? 0.0,
-                                    lastBalanceReset: _balanceData!['lastBalanceReset'] != null
-                                        ? DateTime.parse(_balanceData!['lastBalanceReset'])
-                                        : null,
-                                  )
-                                : const SizedBox.shrink(),
+                            ? BalanceCard(
+                                balance: (_balanceData!['balance'] as num?)?.toDouble() ?? 0.0,
+                                monthlyBalance: (_balanceData!['monthlyBalance'] as num?)?.toDouble() ?? 0.0,
+                                lastBalanceReset: _balanceData!['lastBalanceReset'] != null
+                                    ? DateTime.parse(_balanceData!['lastBalanceReset'])
+                                    : null,
+                              )
+                            : const SizedBox.shrink(),
                       ),
 
                     // Weigh-In Card (Client only)
@@ -224,62 +183,31 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       ),
 
                     // Quick Stats (Client only)
-                    if (!isTrainer)
-                      const SliverToBoxAdapter(
-                        child: DashboardQuickStats(),
-                      ),
+                    if (!isTrainer) const SliverToBoxAdapter(child: DashboardQuickStats()),
 
                     // AI Messages Preview (Client only)
-                    if (!isTrainer && user?.role == 'CLIENT')
-                      const SliverToBoxAdapter(
-                        child: AIMessagesPreviewCard(),
-                      ),
+                    if (!isTrainer && user?.role == 'CLIENT') const SliverToBoxAdapter(child: AIMessagesPreviewCard()),
 
-                    // Workout Calendar (Client only)
-                    if (!isTrainer && user?.role == 'CLIENT')
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: WorkoutCalendarWidget(),
-                        ),
-                      ),
+                    // Workout Calendar removed - use Calendar page instead
 
                     // Nutrition Summary (Client only)
                     if (!isTrainer)
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                          child: NutritionSummaryCard(
-                            calories: 1850,
-                            protein: 120,
-                            carbs: 220,
-                            fats: 65,
-                          ),
+                          child: NutritionSummaryCard(calories: 1850, protein: 120, carbs: 220, fats: 65),
                         ),
                       ),
 
                     // Today's Mission Card
-                    SliverToBoxAdapter(
-                      child: TodaysMissionWidget(todayWorkout: todayWorkout),
-                    ),
+                    SliverToBoxAdapter(child: TodaysMissionWidget(todayWorkout: todayWorkout)),
 
                     // Role-dependent content
-                    if (isTrainer)
-                      const SliverToBoxAdapter(
-                        child: DashboardTrainerContent(),
-                      )
-                    else
-                      SliverToBoxAdapter(
-                        child: DashboardClientContent(
-                          workouts: filteredWorkouts,
-                          onDeleteWorkout: _handleDeleteWorkout,
-                        ),
-                      ),
+                    if (isTrainer) const SliverToBoxAdapter(child: DashboardTrainerContent()),
+                    // Recent Workouts removed - use Calendar page instead
 
                     // Spacing
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: 100),
-                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
                   ],
                 ),
               );

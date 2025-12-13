@@ -20,7 +20,7 @@ import '../../domain/entities/workout.dart';
 
 class WorkoutRunnerPage extends ConsumerStatefulWidget {
   final String workoutId;
-  
+
   const WorkoutRunnerPage({super.key, required this.workoutId});
 
   @override
@@ -37,7 +37,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   bool _checkingCheckIn = true;
   DateTime? _workoutStartTime;
   bool _hasShownFastCompletionMessage = false;
-  
+
   WorkoutSet? _deletedSet;
   int? _deletedExerciseIndex;
   int? _deletedSetIndex;
@@ -57,9 +57,9 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
 
   Future<void> _checkCheckInStatus() async {
     final result = await WorkoutValidationService.checkCheckInStatus();
-    
+
     if (!mounted) return;
-    
+
     setState(() {
       _hasValidCheckIn = result.hasValidCheckIn;
       _checkingCheckIn = false;
@@ -135,12 +135,12 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       ref: ref,
       context: context,
     );
-    
+
     if (deletedSet != null && mounted) {
       _deletedSet = deletedSet;
       _deletedExerciseIndex = exerciseIndex;
       _deletedSetIndex = setIndex;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Set deleted'),
@@ -159,12 +159,10 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   }
 
   void _undoDeleteSet(Workout workout) {
-    if (_deletedSet == null || 
-        _deletedExerciseIndex == null || 
-        _deletedSetIndex == null) {
+    if (_deletedSet == null || _deletedExerciseIndex == null || _deletedSetIndex == null) {
       return;
     }
-    
+
     WorkoutStateService.undoDeleteSet(
       deletedSet: _deletedSet!,
       exerciseIndex: _deletedExerciseIndex!,
@@ -172,7 +170,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       workout: workout,
       ref: ref,
     );
-    
+
     _deletedSet = null;
     _deletedExerciseIndex = null;
     _deletedSetIndex = null;
@@ -211,7 +209,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
       context: context,
       confettiController: _confettiController!,
     );
-    
+
     // Navigate back after animation
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -231,15 +229,13 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   @override
   Widget build(BuildContext context) {
     final workoutsState = ref.watch(workoutControllerProvider);
-    
+
     // Show loading if checking check-in status
     if (_checkingCheckIn) {
       return GradientBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: const Center(
-            child: ShimmerCard(height: 200),
-          ),
+          body: const Center(child: ShimmerCard(height: 200)),
         ),
       );
     }
@@ -248,7 +244,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
     if (!_hasValidCheckIn) {
       return const CheckInRequiredWidget();
     }
-    
+
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -256,26 +252,18 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
           child: workoutsState.when(
             data: (workouts) {
               if (workouts.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No workouts available',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                );
+                return Center(child: Text('No workouts available', style: Theme.of(context).textTheme.bodyLarge));
               }
-              
-              final workout = workouts.firstWhere(
-                (w) => w.id == widget.workoutId,
-                orElse: () => workouts.first,
-              );
-              
+
+              final workout = workouts.firstWhere((w) => w.id == widget.workoutId, orElse: () => workouts.first);
+
               // Initialize keys for all exercises if not already done
               for (int i = 0; i < workout.exercises.length; i++) {
                 if (!_exerciseKeys.containsKey(i)) {
                   _exerciseKeys[i] = GlobalKey();
                 }
               }
-              
+
               return Column(
                 children: [
                   // Header
@@ -288,7 +276,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
                       if (mounted) setState(() {});
                     },
                   ),
-                  
+
                   // Exercise List
                   Expanded(
                     child: workout.exercises.isEmpty
@@ -319,7 +307,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
                             },
                           ),
                   ),
-                  
+
                   // Finish Button
                   FinishWorkoutButton(
                     workout: workout,
@@ -329,12 +317,8 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
                 ],
               );
             },
-            loading: () => const Center(
-              child: ShimmerCard(height: 200),
-            ),
-            error: (error, stack) => Center(
-              child: Text('Error: $error'),
-            ),
+            loading: () => const Center(child: ShimmerCard(height: 200)),
+            error: (error, stack) => Center(child: Text('Error: $error')),
           ),
         ),
       ),

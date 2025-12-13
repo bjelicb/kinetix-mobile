@@ -1919,6 +1919,41 @@ void _checkMonthlyPaywall() async {
 
 ---
 
+## Bug Fixes
+
+### Workout Logs Implementation Fixes
+
+#### 1. Add `isMissed` and `isRestDay` to Workout Entity
+- **Issue**: `Workout` entity was missing `isMissed` and `isRestDay` fields, which are crucial for displaying workout status correctly in the calendar and dashboard.
+- **Fix**: 
+  - Added `isMissed` and `isRestDay` fields to `Workout` entity in `lib/domain/entities/workout.dart`
+  - Updated `WorkoutCollection` model in `lib/data/models/workout_collection.dart` and `workout_collection_stub.dart`
+  - Updated `WorkoutMapper.toEntity()` and `WorkoutMapper.toCollection()` methods
+  - Updated all `Workout` constructors throughout the codebase to include new fields
+  - Ran `build_runner` to regenerate Isar code
+- **Status**: ✅ Completed
+
+#### 2. Load Workout Logs from Web Platform
+- **Issue**: `WorkoutRepositoryImpl.getWorkouts()` always loaded from Isar database, which doesn't exist on web platform, causing workouts to not display on web.
+- **Fix**: Modified `getWorkouts()` in `lib/data/repositories/workout_repository_impl.dart` to:
+  - Check for `kIsWeb` platform
+  - On web: call `RemoteDataSource.getWeekWorkouts()` with today's date
+  - Parse response and convert `WorkoutLog` to `Workout` entities using new helper method `_workoutLogFromServerData()`
+  - Add comprehensive logging for debugging
+  - On mobile: continue using Isar as before
+- **Status**: ✅ Completed
+
+#### 3. Restore CalendarUtils Status Methods
+- **Issue**: `CalendarUtils` was missing `WorkoutStatus` enum, `getWorkoutStatus()`, and `getStatusColor()` methods, preventing the calendar from displaying colored markers for different workout statuses.
+- **Fix**: 
+  - Added `WorkoutStatus` enum (moved outside class as required by Dart)
+  - Added `getWorkoutStatus()` method to determine status based on workout and plan
+  - Added `getStatusColor()` method to return appropriate colors from `AppColors`
+  - Imported necessary dependencies (`app_colors.dart`, `plan.dart`)
+- **Status**: ✅ Completed
+
+---
+
 ## 🔗 **VEZE:**
 
 - **Status:** `docs/MOBILE_STATUS.md`

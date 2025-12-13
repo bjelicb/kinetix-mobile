@@ -83,6 +83,7 @@ class ApiConstants {
   static String planUpdate(String planId) => '/plans/$planId';
   static String planDelete(String planId) => '/plans/$planId';
   static String planAssign(String planId) => '/plans/$planId/assign';
+  static String planCancel(String planId, String clientId) => '/plans/$planId/cancel/$clientId';
   static String planDuplicate(String planId) => '/plans/$planId/duplicate';
   static String planCanUnlockNextWeek(String clientId) => '/plans/unlock-next-week/$clientId';
   static String planRequestNextWeek(String clientId) => '/plans/request-next-week/$clientId';

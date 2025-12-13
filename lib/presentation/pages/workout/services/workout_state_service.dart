@@ -24,16 +24,14 @@ class WorkoutStateService {
     required Function(int, int, double?, Workout) showRpePicker,
   }) {
     AppHaptic.medium();
-    
+
     // Parse value
-    final numValue = field == 'weight' 
-        ? double.tryParse(value) ?? 0.0
-        : int.tryParse(value) ?? 0;
-    
+    final numValue = field == 'weight' ? double.tryParse(value) ?? 0.0 : int.tryParse(value) ?? 0;
+
     // Update workout set
     final exercise = workout.exercises[exerciseIndex];
     final set = exercise.sets[setIndex];
-    
+
     final updatedSet = WorkoutSet(
       id: set.id,
       weight: field == 'weight' ? numValue as double : set.weight,
@@ -41,10 +39,10 @@ class WorkoutStateService {
       rpe: set.rpe,
       isCompleted: set.isCompleted,
     );
-    
+
     final updatedSets = List<WorkoutSet>.from(exercise.sets);
     updatedSets[setIndex] = updatedSet;
-    
+
     final updatedExercise = Exercise(
       id: exercise.id,
       name: exercise.name,
@@ -54,24 +52,26 @@ class WorkoutStateService {
       equipment: exercise.equipment,
       instructions: exercise.instructions,
     );
-    
+
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updatedExercise;
-    
+
     final updatedWorkout = Workout(
       id: workout.id,
       serverId: workout.serverId,
       name: workout.name,
       scheduledDate: workout.scheduledDate,
       isCompleted: workout.isCompleted,
+      isMissed: workout.isMissed,
+      isRestDay: workout.isRestDay,
       exercises: updatedExercises,
       isDirty: true,
       updatedAt: DateTime.now(),
     );
-    
+
     // Save to repository
     ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
+
     // Auto-advance: weight -> reps -> RPE -> next set
     if (field == 'weight') {
       // After weight, open reps
@@ -103,11 +103,11 @@ class WorkoutStateService {
     required Function(String, int, int, String, Workout) showNumpad,
   }) {
     AppHaptic.medium();
-    
+
     // Update workout set
     final exercise = workout.exercises[exerciseIndex];
     final set = exercise.sets[setIndex];
-    
+
     final updatedSet = WorkoutSet(
       id: set.id,
       weight: set.weight,
@@ -115,10 +115,10 @@ class WorkoutStateService {
       rpe: rpe,
       isCompleted: set.isCompleted,
     );
-    
+
     final updatedSets = List<WorkoutSet>.from(exercise.sets);
     updatedSets[setIndex] = updatedSet;
-    
+
     final updatedExercise = Exercise(
       id: exercise.id,
       name: exercise.name,
@@ -128,24 +128,26 @@ class WorkoutStateService {
       equipment: exercise.equipment,
       instructions: exercise.instructions,
     );
-    
+
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updatedExercise;
-    
+
     final updatedWorkout = Workout(
       id: workout.id,
       serverId: workout.serverId,
       name: workout.name,
       scheduledDate: workout.scheduledDate,
       isCompleted: workout.isCompleted,
+      isMissed: workout.isMissed,
+      isRestDay: workout.isRestDay,
       exercises: updatedExercises,
       isDirty: true,
       updatedAt: DateTime.now(),
     );
-    
+
     // Save to repository
     ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
+
     // Auto-advance: After RPE, move to next set
     final nextSetIndex = setIndex + 1;
     if (nextSetIndex < exercise.sets.length) {
@@ -176,7 +178,7 @@ class WorkoutStateService {
               }
             }
           });
-          
+
           Future.delayed(const Duration(milliseconds: 700), () {
             if (context.mounted) {
               final nextSet = nextExercise.sets[0];
@@ -197,11 +199,11 @@ class WorkoutStateService {
     required BuildContext context,
   }) {
     AppHaptic.medium();
-    
+
     // Store deleted set for undo
     final exercise = workout.exercises[exerciseIndex];
     final set = exercise.sets[setIndex];
-    
+
     // Remove set from exercise
     final updatedExercise = Exercise(
       id: exercise.id,
@@ -212,25 +214,27 @@ class WorkoutStateService {
       equipment: exercise.equipment,
       instructions: exercise.instructions,
     );
-    
+
     // Update workout
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updatedExercise;
-    
+
     final updatedWorkout = Workout(
       id: workout.id,
       serverId: workout.serverId,
       name: workout.name,
       scheduledDate: workout.scheduledDate,
       isCompleted: workout.isCompleted,
+      isMissed: workout.isMissed,
+      isRestDay: workout.isRestDay,
       exercises: updatedExercises,
       isDirty: true,
       updatedAt: DateTime.now(),
     );
-    
+
     // Save to repository
     ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-    
+
     // Return deleted set for undo functionality
     return set;
   }
@@ -244,11 +248,11 @@ class WorkoutStateService {
     required WidgetRef ref,
   }) {
     AppHaptic.light();
-    
+
     final exercise = workout.exercises[exerciseIndex];
     final updatedSets = List<WorkoutSet>.from(exercise.sets);
     updatedSets.insert(setIndex, deletedSet);
-    
+
     final updatedExercise = Exercise(
       id: exercise.id,
       name: exercise.name,
@@ -258,21 +262,23 @@ class WorkoutStateService {
       equipment: exercise.equipment,
       instructions: exercise.instructions,
     );
-    
+
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updatedExercise;
-    
+
     final updatedWorkout = Workout(
       id: workout.id,
       serverId: workout.serverId,
       name: workout.name,
       scheduledDate: workout.scheduledDate,
       isCompleted: workout.isCompleted,
+      isMissed: workout.isMissed,
+      isRestDay: workout.isRestDay,
       exercises: updatedExercises,
       isDirty: true,
       updatedAt: DateTime.now(),
     );
-    
+
     ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
   }
 
@@ -284,7 +290,9 @@ class WorkoutStateService {
       return false;
     }
     final isCompleted = exercise.sets.every((set) => set.isCompleted);
-    debugPrint('[WorkoutStateService] Exercise "${exercise.name}" - ${exercise.sets.where((s) => s.isCompleted).length}/${exercise.sets.length} sets completed - Overall: $isCompleted');
+    debugPrint(
+      '[WorkoutStateService] Exercise "${exercise.name}" - ${exercise.sets.where((s) => s.isCompleted).length}/${exercise.sets.length} sets completed - Overall: $isCompleted',
+    );
     return isCompleted;
   }
 
@@ -298,23 +306,22 @@ class WorkoutStateService {
     required Function(bool) onFastCompletion,
   }) {
     AppHaptic.selection();
-    
+
     final exercise = workout.exercises[exerciseIndex];
     final isCurrentlyCompleted = isExerciseCompleted(exercise);
     final newCompletedState = !isCurrentlyCompleted;
-    
+
     debugPrint('[WorkoutStateService] Exercise $exerciseIndex toggle initiated - Current state: $isCurrentlyCompleted');
     debugPrint('[WorkoutStateService] Updating ${exercise.sets.length} sets to $newCompletedState');
-    
+
     // Create updated sets with new completion state
-    final updatedSets = exercise.sets.map((set) => WorkoutSet(
-      id: set.id,
-      weight: set.weight,
-      reps: set.reps,
-      rpe: set.rpe,
-      isCompleted: newCompletedState,
-    )).toList();
-    
+    final updatedSets = exercise.sets
+        .map(
+          (set) =>
+              WorkoutSet(id: set.id, weight: set.weight, reps: set.reps, rpe: set.rpe, isCompleted: newCompletedState),
+        )
+        .toList();
+
     // Create updated exercise
     final updatedExercise = Exercise(
       id: exercise.id,
@@ -325,36 +332,35 @@ class WorkoutStateService {
       equipment: exercise.equipment,
       instructions: exercise.instructions,
     );
-    
+
     // Create updated workout
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updatedExercise;
-    
+
     final updatedWorkout = Workout(
       id: workout.id,
       serverId: workout.serverId,
       name: workout.name,
       scheduledDate: workout.scheduledDate,
       isCompleted: workout.isCompleted,
+      isMissed: workout.isMissed,
+      isRestDay: workout.isRestDay,
       exercises: updatedExercises,
       isDirty: true,
       updatedAt: DateTime.now(),
     );
-    
+
     // Fast completion validation (only for first exercise, only once)
-    if (exerciseIndex == 0 && 
-        newCompletedState == true &&
-        workoutStartTime != null) {
-      
+    if (exerciseIndex == 0 && newCompletedState == true && workoutStartTime != null) {
       final duration = DateTime.now().difference(workoutStartTime);
       debugPrint('[WorkoutStateService] Workout duration: ${duration.inSeconds}s - Threshold: 30s');
-      
+
       if (duration.inSeconds < 30) {
         debugPrint('[WorkoutStateService] Fast completion detected');
         onFastCompletion(true);
       }
     }
-    
+
     try {
       // Optimistic UI update + save to repository
       ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
@@ -362,10 +368,10 @@ class WorkoutStateService {
     } catch (e) {
       // Rollback on error - revert to original state
       debugPrint('[WorkoutStateService] ERROR - Rollback initiated: $e');
-      
+
       // Revert the workout update
       ref.read(workoutControllerProvider.notifier).updateWorkout(workout);
-      
+
       // Show error message
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -387,7 +393,7 @@ class WorkoutStateService {
     required ConfettiController confettiController,
   }) async {
     AppHaptic.heavy();
-    
+
     try {
       // Mark workout as completed
       final updatedWorkout = Workout(
@@ -396,17 +402,19 @@ class WorkoutStateService {
         name: workout.name,
         scheduledDate: workout.scheduledDate,
         isCompleted: true,
+        isMissed: workout.isMissed,
+        isRestDay: workout.isRestDay,
         exercises: workout.exercises,
         isDirty: true,
         updatedAt: DateTime.now(),
       );
-      
+
       // Save to repository
       await ref.read(workoutControllerProvider.notifier).updateWorkout(updatedWorkout);
-      
+
       // Show confetti animation
       confettiController.play();
-      
+
       // Show success message
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -419,14 +427,10 @@ class WorkoutStateService {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error finishing workout: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error finishing workout: $e'), backgroundColor: AppColors.error));
       }
     }
   }
 }
-

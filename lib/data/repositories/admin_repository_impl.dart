@@ -203,6 +203,14 @@ class AdminRepositoryImpl implements AdminRepository {
     }
   }
 
+  Future<void> cancelPlan(String planId, String clientId) async {
+    try {
+      await _remoteDataSource.cancelPlan(planId, clientId);
+    } catch (e) {
+      throw Exception('Failed to cancel plan: ${e.toString()}');
+    }
+  }
+
   @override
   Future<List<Map<String, dynamic>>> getAllWorkouts() async {
     try {

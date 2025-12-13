@@ -36,9 +36,7 @@ class CalendarTableWidget extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.lg),
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: sizes.maxHeight,
-        ),
+        constraints: BoxConstraints(maxHeight: sizes.maxHeight),
         child: GradientCard(
           gradient: AppGradients.card,
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -56,23 +54,13 @@ class CalendarTableWidget extends StatelessWidget {
               outsideDaysVisible: false,
               weekendTextStyle: const TextStyle(color: AppColors.textSecondary),
               defaultTextStyle: const TextStyle(color: AppColors.textPrimary),
-              selectedDecoration: BoxDecoration(
-                gradient: AppGradients.primary,
-                shape: BoxShape.circle,
-              ),
+              selectedDecoration: BoxDecoration(gradient: AppGradients.primary, shape: BoxShape.circle),
               todayDecoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primary,
-                  width: 2,
-                ),
+                border: Border.all(color: AppColors.primary, width: 2),
               ),
-              markerDecoration: const BoxDecoration(
-                color: AppColors.success,
-                shape: BoxShape.circle,
-              ),
-              markersMaxCount: 3,
+              markersMaxCount: 1,
               markerSize: 6,
             ),
             headerStyle: HeaderStyle(
@@ -83,18 +71,9 @@ class CalendarTableWidget extends StatelessWidget {
                 gradient: AppGradients.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              formatButtonTextStyle: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: sizes.isSmallPhone ? 12 : 14,
-              ),
-              leftChevronIcon: const Icon(
-                Icons.chevron_left_rounded,
-                color: AppColors.textPrimary,
-              ),
-              rightChevronIcon: const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textPrimary,
-              ),
+              formatButtonTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: sizes.isSmallPhone ? 12 : 14),
+              leftChevronIcon: const Icon(Icons.chevron_left_rounded, color: AppColors.textPrimary),
+              rightChevronIcon: const Icon(Icons.chevron_right_rounded, color: AppColors.textPrimary),
               titleTextStyle: (Theme.of(context).textTheme.titleLarge ?? const TextStyle()).copyWith(
                 fontSize: sizes.isSmallPhone ? 18 : null,
               ),
@@ -133,6 +112,22 @@ class CalendarTableWidget extends StatelessWidget {
                   ],
                 );
               },
+              markerBuilder: (context, date, events) {
+                if (events.isEmpty) return null;
+
+                final workout = events.first as Workout;
+                final status = CalendarUtils.getWorkoutStatus(workout, date, null);
+                final color = CalendarUtils.getStatusColor(status);
+
+                return Positioned(
+                  bottom: 1,
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                );
+              },
             ),
             eventLoader: (day) {
               final date = DateTime(day.year, day.month, day.day);
@@ -147,4 +142,3 @@ class CalendarTableWidget extends StatelessWidget {
     );
   }
 }
-

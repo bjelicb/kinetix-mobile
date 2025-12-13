@@ -1,0 +1,44 @@
+{
+  // Flutter & Dart Settings
+  "dart.flutterSdkPath": null, // Auto-detect Flutter SDK
+  "dart.lineLength": 120,
+  "dart.enableSdkFormatter": true,
+  "dart.previewFlutterUiGuides": true,
+  "dart.previewFlutterUiGuidesCustomTracking": true,
+  
+  // Editor Settings
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "Dart-Code.dart-code",
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.selectionHighlight": false,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.suggestSelection": "first",
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off"
+  },
+  
+  // File Associations
+  "files.associations": {
+    "*.dart": "dart"
+  },
+  
+  // Exclude files from search
+  "search.exclude": {
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/.packages": true,
+    "**/pubspec.lock": true
+  },
+  
+  // File watcher exclusions
+  "files.watcherExclude": {
+    "**/.dart_tool/**": true,
+    "**/build/**": true,
+    "**/.flutter-plugins/**": true,
+    "**/.flutter-plugins-dependencies/**": true
+  }
+}
+

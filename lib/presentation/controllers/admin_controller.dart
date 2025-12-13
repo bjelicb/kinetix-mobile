@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'dart:developer' as developer;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/admin_repository.dart';
@@ -20,13 +20,13 @@ AdminRepository adminRepository(AdminRepositoryRef ref) {
 @riverpod
 class AdminController extends _$AdminController {
   late AdminRepository _repository;
-  
+
   @override
   FutureOr<Map<String, dynamic>> build() async {
     _repository = ref.read(adminRepositoryProvider);
     return await _repository.getAdminStats();
   }
-  
+
   Future<List<User>> getAllUsers() async {
     try {
       return await _repository.getAllUsers();
@@ -34,7 +34,7 @@ class AdminController extends _$AdminController {
       throw Exception('Failed to load users: ${e.toString()}');
     }
   }
-  
+
   Future<User> createUser({
     required String email,
     required String password,
@@ -57,23 +57,20 @@ class AdminController extends _$AdminController {
       throw Exception('Failed to create user: ${e.toString()}');
     }
   }
-  
+
   Future<void> assignClientToTrainer({
     required String clientId,
     String? trainerId, // Optional: null means unassign
   }) async {
     try {
-      await _repository.assignClientToTrainer(
-        clientId: clientId,
-        trainerId: trainerId,
-      );
+      await _repository.assignClientToTrainer(clientId: clientId, trainerId: trainerId);
       // Refresh stats after assignment
       ref.invalidateSelf();
     } catch (e) {
       throw Exception('Failed to assign client: ${e.toString()}');
     }
   }
-  
+
   Future<void> refreshStats() async {
     ref.invalidateSelf();
   }
@@ -143,10 +140,35 @@ class AdminController extends _$AdminController {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getAllWorkouts() async {
+  Future<void> cancelPlan(String planId, String clientId) async {
+    developer.log('[AdminController] cancelPlan START - planId: $planId, clientId: $clientId', name: 'AdminController');
     try {
-      return await _repository.getAllWorkouts();
+      await _repository.cancelPlan(planId, clientId);
+      ref.invalidateSelf();
+      developer.log('[AdminController] cancelPlan SUCCESS - Plan cancelled for client $clientId', name: 'AdminController');
     } catch (e) {
+      developer.log('[AdminController] cancelPlan ERROR: $e', name: 'AdminController', error: e);
+      throw Exception('Failed to cancel plan: ${e.toString()}');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllWorkouts() async {
+    developer.log('[AdminController] getAllWorkouts START - calling repository...', name: 'AdminController');
+    try {
+      final workouts = await _repository.getAllWorkouts();
+      developer.log('[AdminController] getAllWorkouts SUCCESS - received ${workouts.length} workouts', name: 'AdminController');
+
+      if (workouts.isNotEmpty) {
+        final sampleWorkout = workouts.first;
+        developer.log(
+          '[AdminController] getAllWorkouts - sample workout: id=${sampleWorkout['_id']}, clientId=${sampleWorkout['clientId']}, planId=${sampleWorkout['weeklyPlanId']}',
+          name: 'AdminController',
+        );
+      }
+
+      return workouts;
+    } catch (e) {
+      developer.log('[AdminController] getAllWorkouts ERROR: $e', name: 'AdminController', error: e);
       throw Exception('Failed to load workouts: ${e.toString()}');
     }
   }
@@ -183,43 +205,29 @@ class AdminController extends _$AdminController {
 
   Future<void> deleteUser(String userId) async {
     try {
-      debugPrint('[AdminController] deleteUser called with ID: $userId');
+      developer.log('[AdminController] deleteUser called with ID: $userId', name: 'AdminController');
       await _repository.deleteUser(userId);
       ref.invalidateSelf();
-      debugPrint('[AdminController] deleteUser completed successfully');
+      developer.log('[AdminController] deleteUser completed successfully', name: 'AdminController');
     } catch (e, stackTrace) {
-      debugPrint('[AdminController] ERROR deleting user: $e');
-      debugPrint('[AdminController] Stack trace: $stackTrace');
+      developer.log('[AdminController] ERROR deleting user: $e', name: 'AdminController', error: e);
+      developer.log('[AdminController] Stack trace: $stackTrace', name: 'AdminController');
       throw Exception('Failed to delete user: ${e.toString()}');
     }
   }
 
-  Future<void> updateUserStatus({
-    required String userId,
-    required bool isActive,
-  }) async {
+  Future<void> updateUserStatus({required String userId, required bool isActive}) async {
     try {
-      await _repository.updateUserStatus(
-        userId: userId,
-        isActive: isActive,
-      );
+      await _repository.updateUserStatus(userId: userId, isActive: isActive);
       ref.invalidateSelf();
     } catch (e) {
       throw Exception('Failed to update user status: ${e.toString()}');
     }
   }
 
-  Future<void> updateWorkoutStatus({
-    required String workoutId,
-    bool? isCompleted,
-    bool? isMissed,
-  }) async {
+  Future<void> updateWorkoutStatus({required String workoutId, bool? isCompleted, bool? isMissed}) async {
     try {
-      await _repository.updateWorkoutStatus(
-        workoutId: workoutId,
-        isCompleted: isCompleted,
-        isMissed: isMissed,
-      );
+      await _repository.updateWorkoutStatus(workoutId: workoutId, isCompleted: isCompleted, isMissed: isMissed);
       ref.invalidateSelf();
     } catch (e) {
       throw Exception('Failed to update workout status: ${e.toString()}');
@@ -232,9 +240,9 @@ class AdminController extends _$AdminController {
       ref.invalidateSelf();
     } catch (e, stackTrace) {
       // Log detailed error for debugging
-      debugPrint('ERROR [AdminController.deleteWorkout]: Failed to delete workout $workoutId');
-      debugPrint('Error: $e');
-      debugPrint('Stack trace: $stackTrace');
+      developer.log('ERROR [AdminController.deleteWorkout]: Failed to delete workout $workoutId', name: 'AdminController');
+      developer.log('Error: $e', name: 'AdminController', error: e);
+      developer.log('Stack trace: $stackTrace', name: 'AdminController');
       throw Exception('Failed to delete workout: ${e.toString()}');
     }
   }

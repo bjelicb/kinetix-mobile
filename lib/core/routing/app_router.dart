@@ -10,6 +10,7 @@ import '../../presentation/pages/calendar_page.dart';
 import '../../presentation/pages/profile_page.dart';
 import '../../presentation/pages/workout_runner_page.dart';
 import '../../presentation/pages/workout_edit_page.dart';
+import '../../presentation/pages/workout_details_page.dart';
 import '../../presentation/pages/exercise_selection_page.dart';
 import '../../presentation/pages/check_in_history_page.dart';
 import '../../presentation/pages/analytics_page.dart';
@@ -38,107 +39,106 @@ part 'app_router.g.dart';
 Future<bool> _shouldRequireCheckIn(User? user) async {
   // If no user, no check-in required
   if (user == null) return false;
-  
+
   // Only clients need to check in
   if (user.role != 'CLIENT') return false;
-  
+
   final localDataSource = LocalDataSource();
-  
+
   // Check if user has an active plan
   final activePlan = await localDataSource.getActivePlan();
   debugPrint('[AppRouter:CheckInValidation] Active plan check: ${activePlan != null}');
-  
+
   if (activePlan == null) {
     debugPrint('[AppRouter:CheckInValidation] No active plan - Check-in NOT required');
     return false;
   }
-  
+
   debugPrint('[AppRouter:CheckInValidation] Active plan found: ${activePlan.name}');
-  
+
   // Check if user already checked in today
   final todayCheckIn = await localDataSource.getTodayCheckIn();
   if (todayCheckIn != null) {
     debugPrint('[AppRouter:CheckInValidation] Already checked in today - Check-in NOT required');
     return false;
   }
-  
+
   // Check if there's a queued check-in for today (offline mode)
   final unsyncedCheckIns = await localDataSource.getUnsyncedCheckIns();
   if (unsyncedCheckIns.isNotEmpty) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     for (final checkIn in unsyncedCheckIns) {
-      final checkInDate = DateTime(
-        checkIn.timestamp.year,
-        checkIn.timestamp.month,
-        checkIn.timestamp.day,
-      );
-      
+      final checkInDate = DateTime(checkIn.timestamp.year, checkIn.timestamp.month, checkIn.timestamp.day);
+
       if (checkInDate.isAtSameMomentAs(today)) {
         debugPrint('[AppRouter:CheckInValidation] Found queued check-in for today - Bypassing requirement');
         return false;
       }
     }
   }
-  
+
   // Check if user has workouts scheduled for today
   final todayWorkouts = await localDataSource.getTodayWorkouts();
-  
+
   // No workouts today, no check-in required
   if (todayWorkouts.isEmpty) return false;
-  
+
   // Check if any workout is not completed
   // If all workouts are completed, no check-in required
   final hasIncompleteWorkout = todayWorkouts.any((workout) => !workout.isCompleted);
-  
+
   return hasIncompleteWorkout;
 }
 
 @riverpod
 GoRouter appRouter(AppRouterRef ref) {
   final authState = ref.watch(authControllerProvider);
-  
+
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) async {
       final isAuthenticated = authState.valueOrNull != null;
       final currentLocation = state.matchedLocation;
-      
+
       // If on splash, wait for bootstrap then redirect
       if (currentLocation == '/splash') {
         // Check if bootstrap is complete by watching the provider
         // For now, allow splash to stay and let it handle navigation
         return null;
       }
-      
+
       // Check onboarding status
       final isOnboardingCompleted = await SharedPreferencesService.isOnboardingCompleted();
-      
+
       // If onboarding not completed, redirect to onboarding (unless already there)
       if (!isOnboardingCompleted && currentLocation != '/onboarding' && currentLocation != '/splash') {
         return '/onboarding';
       }
-      
+
       // If onboarding completed and on onboarding page, redirect based on auth
       if (isOnboardingCompleted && currentLocation == '/onboarding') {
         return isAuthenticated ? '/home' : '/login';
       }
-      
+
       // If not authenticated and not on login/splash/onboarding, go to login
-      if (!isAuthenticated && currentLocation != '/login' && currentLocation != '/splash' && currentLocation != '/onboarding') {
+      if (!isAuthenticated &&
+          currentLocation != '/login' &&
+          currentLocation != '/splash' &&
+          currentLocation != '/onboarding') {
         return '/login';
       }
-      
+
       // If authenticated and on login, go to home
       if (isAuthenticated && currentLocation == '/login') {
         return '/home';
       }
-      
+
       // Mandatory check-in flow (only for clients with incomplete workout today)
       if (isAuthenticated) {
         final user = authState.valueOrNull;
-        
+
         // Allow access to check-in pages, login, splash, onboarding, payment without check-in requirement
         final allowedRoutesWithoutCheckIn = [
           '/check-in',
@@ -148,15 +148,15 @@ GoRouter appRouter(AppRouterRef ref) {
           '/onboarding',
           '/payment',
         ];
-        
+
         if (allowedRoutesWithoutCheckIn.contains(currentLocation)) {
           return null; // Allow access
         }
-        
+
         // Check if check-in is required
         try {
           final requiresCheckIn = await _shouldRequireCheckIn(user);
-          
+
           if (requiresCheckIn) {
             // Redirect to check-in if not already there or on check-in history
             if (currentLocation != '/check-in' && currentLocation != '/check-in/history') {
@@ -168,7 +168,7 @@ GoRouter appRouter(AppRouterRef ref) {
           // This prevents blocking user if there's a temporary error
         }
       }
-      
+
       return null;
     },
     routes: [
@@ -211,9 +211,10 @@ GoRouter appRouter(AppRouterRef ref) {
           key: state.pageKey,
           child: const CheckInPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
-            );
+            final scaleAnimation = Tween<double>(
+              begin: 0.8,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return ScaleTransition(
               scale: scaleAnimation,
               child: FadeTransition(opacity: animation, child: child),
@@ -231,10 +232,7 @@ GoRouter appRouter(AppRouterRef ref) {
             final slideAnimation = Tween<Offset>(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: AppAnimations.pageTransitionCurve,
-            ));
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
@@ -249,10 +247,7 @@ GoRouter appRouter(AppRouterRef ref) {
             final slideAnimation = Tween<Offset>(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: AppAnimations.pageTransitionCurve,
-            ));
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
@@ -270,10 +265,7 @@ GoRouter appRouter(AppRouterRef ref) {
                 final slideAnimation = Tween<Offset>(
                   begin: const Offset(1.0, 0.0),
                   end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: AppAnimations.pageTransitionCurve,
-                ));
+                ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
                 return SlideTransition(position: slideAnimation, child: child);
               },
               transitionDuration: AppAnimations.pageTransitionDuration,
@@ -288,10 +280,7 @@ GoRouter appRouter(AppRouterRef ref) {
                 final slideAnimation = Tween<Offset>(
                   begin: const Offset(1.0, 0.0),
                   end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: AppAnimations.pageTransitionCurve,
-                ));
+                ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
                 return SlideTransition(position: slideAnimation, child: child);
               },
               transitionDuration: AppAnimations.pageTransitionDuration,
@@ -306,10 +295,7 @@ GoRouter appRouter(AppRouterRef ref) {
                 final slideAnimation = Tween<Offset>(
                   begin: const Offset(1.0, 0.0),
                   end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: AppAnimations.pageTransitionCurve,
-                ));
+                ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
                 return SlideTransition(position: slideAnimation, child: child);
               },
               transitionDuration: AppAnimations.pageTransitionDuration,
@@ -325,9 +311,7 @@ GoRouter appRouter(AppRouterRef ref) {
                   key: state.pageKey,
                   child: Scaffold(
                     appBar: AppBar(title: const Text('Access Denied')),
-                    body: const Center(
-                      child: Text('You do not have permission to access this page.'),
-                    ),
+                    body: const Center(child: Text('You do not have permission to access this page.')),
                   ),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) {
                     return FadeTransition(opacity: animation, child: child);
@@ -335,7 +319,7 @@ GoRouter appRouter(AppRouterRef ref) {
                   transitionDuration: AppAnimations.pageTransitionDuration,
                 );
               }
-              
+
               return CustomTransitionPage(
                 key: state.pageKey,
                 child: const AdminDashboardPage(),
@@ -343,10 +327,7 @@ GoRouter appRouter(AppRouterRef ref) {
                   final slideAnimation = Tween<Offset>(
                     begin: const Offset(1.0, 0.0),
                     end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: AppAnimations.pageTransitionCurve,
-                  ));
+                  ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
                   return SlideTransition(position: slideAnimation, child: child);
                 },
                 transitionDuration: AppAnimations.pageTransitionDuration,
@@ -356,6 +337,27 @@ GoRouter appRouter(AppRouterRef ref) {
         ],
       ),
       GoRoute(
+        path: '/workout/:id/details',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: WorkoutDetailsPage(workoutId: id),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              final scaleAnimation = Tween<double>(
+                begin: 0.8,
+                end: 1.0,
+              ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
+              return ScaleTransition(
+                scale: scaleAnimation,
+                child: FadeTransition(opacity: animation, child: child),
+              );
+            },
+            transitionDuration: AppAnimations.pageTransitionDuration,
+          );
+        },
+      ),
+      GoRoute(
         path: '/workout/:id',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
@@ -363,9 +365,10 @@ GoRouter appRouter(AppRouterRef ref) {
             key: state.pageKey,
             child: WorkoutRunnerPage(workoutId: id),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
-              );
+              final scaleAnimation = Tween<double>(
+                begin: 0.8,
+                end: 1.0,
+              ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
               return ScaleTransition(
                 scale: scaleAnimation,
                 child: FadeTransition(opacity: animation, child: child),
@@ -384,9 +387,10 @@ GoRouter appRouter(AppRouterRef ref) {
             key: state.pageKey,
             child: WorkoutEditPage(selectedDate: selectedDate),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
-              );
+              final scaleAnimation = Tween<double>(
+                begin: 0.8,
+                end: 1.0,
+              ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
               return ScaleTransition(
                 scale: scaleAnimation,
                 child: FadeTransition(opacity: animation, child: child),
@@ -404,9 +408,10 @@ GoRouter appRouter(AppRouterRef ref) {
             key: state.pageKey,
             child: WorkoutEditPage(workoutId: id),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
-              );
+              final scaleAnimation = Tween<double>(
+                begin: 0.8,
+                end: 1.0,
+              ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
               return ScaleTransition(
                 scale: scaleAnimation,
                 child: FadeTransition(opacity: animation, child: child),
@@ -422,9 +427,10 @@ GoRouter appRouter(AppRouterRef ref) {
           key: state.pageKey,
           child: const ExerciseSelectionPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
-            );
+            final scaleAnimation = Tween<double>(
+              begin: 0.8,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return ScaleTransition(
               scale: scaleAnimation,
               child: FadeTransition(opacity: animation, child: child),
@@ -442,10 +448,7 @@ GoRouter appRouter(AppRouterRef ref) {
             final slideAnimation = Tween<Offset>(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: AppAnimations.pageTransitionCurve,
-            ));
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
@@ -460,10 +463,7 @@ GoRouter appRouter(AppRouterRef ref) {
             final slideAnimation = Tween<Offset>(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: AppAnimations.pageTransitionCurve,
-            ));
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
@@ -478,10 +478,7 @@ GoRouter appRouter(AppRouterRef ref) {
             final slideAnimation = Tween<Offset>(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: AppAnimations.pageTransitionCurve,
-            ));
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
@@ -493,9 +490,10 @@ GoRouter appRouter(AppRouterRef ref) {
           key: state.pageKey,
           child: const WeighInPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve),
-            );
+            final scaleAnimation = Tween<double>(
+              begin: 0.8,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return ScaleTransition(
               scale: scaleAnimation,
               child: FadeTransition(opacity: animation, child: child),
@@ -513,10 +511,7 @@ GoRouter appRouter(AppRouterRef ref) {
             final slideAnimation = Tween<Offset>(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: AppAnimations.pageTransitionCurve,
-            ));
+            ).animate(CurvedAnimation(parent: animation, curve: AppAnimations.pageTransitionCurve));
             return SlideTransition(position: slideAnimation, child: child);
           },
           transitionDuration: AppAnimations.pageTransitionDuration,
@@ -530,9 +525,9 @@ GoRouter appRouter(AppRouterRef ref) {
 class HomeShell extends StatelessWidget {
   final Widget child;
   final GoRouterState state;
-  
+
   const HomeShell({required this.child, required this.state, super.key});
-  
+
   int _getCurrentIndex() {
     final location = state.matchedLocation;
     if (location == '/home') return 0;
@@ -541,7 +536,7 @@ class HomeShell extends StatelessWidget {
     if (location == '/admin') return 3;
     return 0;
   }
-  
+
   void _onNavTap(int index, BuildContext context) {
     switch (index) {
       case 0:
@@ -558,7 +553,7 @@ class HomeShell extends StatelessWidget {
         break;
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

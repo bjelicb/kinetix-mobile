@@ -61,12 +61,9 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading workout: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading workout: $e'), backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) {
@@ -74,7 +71,6 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
       }
     }
   }
-
 
   Future<void> _addExercise() async {
     AppHaptic.selection();
@@ -99,10 +95,7 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
 
     if (!mounted) return;
 
-    final selectedTemplate = await TemplateSelectionDialog.show(
-      context: context,
-      templates: templates,
-    );
+    final selectedTemplate = await TemplateSelectionDialog.show(context: context, templates: templates);
 
     if (selectedTemplate != null) {
       await _applyTemplate(selectedTemplate);
@@ -110,10 +103,7 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
   }
 
   Future<void> _applyTemplate(WorkoutTemplate template) async {
-    final confirmed = await ApplyTemplateDialog.show(
-      context: context,
-      templateName: template.name,
-    );
+    final confirmed = await ApplyTemplateDialog.show(context: context, templateName: template.name);
 
     if (confirmed != true) return;
 
@@ -139,12 +129,9 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error applying template: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error applying template: $e'), backgroundColor: AppColors.error));
       }
     }
   }
@@ -161,18 +148,12 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
       return;
     }
 
-    final validationError = WorkoutEditService.validateWorkout(
-      _nameController.text,
-      _exercises,
-    );
+    final validationError = WorkoutEditService.validateWorkout(_nameController.text, _exercises);
 
     if (validationError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(validationError),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationError), backgroundColor: AppColors.warning));
       return;
     }
 
@@ -185,26 +166,20 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
         name: _nameController.text.trim(),
         scheduledDate: _selectedDate,
         isCompleted: false,
+        isMissed: false,
+        isRestDay: false,
         exercises: _exercises,
         isDirty: true,
         updatedAt: DateTime.now(),
       );
 
-      await WorkoutEditService.saveWorkout(
-        workout,
-        widget.workoutId != null,
-        ref,
-      );
+      await WorkoutEditService.saveWorkout(workout, widget.workoutId != null, ref);
 
       if (mounted) {
         AppHaptic.heavy();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              widget.workoutId != null
-                  ? 'Workout updated successfully'
-                  : 'Workout created successfully',
-            ),
+            content: Text(widget.workoutId != null ? 'Workout updated successfully' : 'Workout created successfully'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -212,12 +187,9 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving workout: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving workout: $e'), backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) {
@@ -239,9 +211,7 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
+            child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)),
           ),
         ),
       );
@@ -297,13 +267,8 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: const BorderSide(color: AppColors.primary),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -317,9 +282,7 @@ class _WorkoutEditPageState extends ConsumerState<WorkoutEditPage> {
                 const SizedBox(height: 32),
                 NeonButton(
                   text: widget.workoutId != null ? 'Update Workout' : 'Create Workout',
-                  icon: widget.workoutId != null
-                      ? Icons.save_rounded
-                      : Icons.add_rounded,
+                  icon: widget.workoutId != null ? Icons.save_rounded : Icons.add_rounded,
                   onPressed: _isSaving ? null : _saveWorkout,
                   isLoading: _isSaving,
                   gradient: AppGradients.primary,

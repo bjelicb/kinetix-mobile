@@ -21,7 +21,7 @@ final planRepositoryProvider = AutoDisposeProvider<PlanRepository>.internal(
 );
 
 typedef PlanRepositoryRef = AutoDisposeProviderRef<PlanRepository>;
-String _$currentPlanHash() => r'c84407af1fba7908d0a0a82b0d08d0152d83abfe';
+String _$currentPlanHash() => r'd004fc75c1e3e51201f9c2689fc71267a5130103';
 
 /// See also [currentPlan].
 @ProviderFor(currentPlan)

@@ -11,12 +11,7 @@ class DatabaseOverviewCard extends StatelessWidget {
   final bool isLoading;
   final ValueChanged<User> onUserTap;
 
-  const DatabaseOverviewCard({
-    super.key,
-    required this.users,
-    required this.isLoading,
-    required this.onUserTap,
-  });
+  const DatabaseOverviewCard({super.key, required this.users, required this.isLoading, required this.onUserTap});
 
   @override
   Widget build(BuildContext context) {
@@ -32,17 +27,11 @@ class DatabaseOverviewCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.storage_rounded,
-                    color: AppColors.textSecondary,
-                    size: 28,
-                  ),
+                  Icon(Icons.storage_rounded, color: AppColors.textSecondary, size: 28),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    'Database Overview',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
+                    'Database',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.textPrimary),
                   ),
                 ],
               ),
@@ -51,17 +40,13 @@ class DatabaseOverviewCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface1,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.adminAccent,
-                    width: 1,
-                  ),
+                  border: Border.all(color: AppColors.adminAccent, width: 1),
                 ),
                 child: Text(
                   '${users.length} ${users.length == 1 ? 'user' : 'users'}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -69,10 +54,7 @@ class DatabaseOverviewCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           if (isLoading)
             const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: AnimatedCyberLoader(size: 40),
-              ),
+              child: Padding(padding: EdgeInsets.all(AppSpacing.lg), child: AnimatedCyberLoader(size: 40)),
             )
           else if (users.isEmpty)
             Padding(
@@ -80,17 +62,11 @@ class DatabaseOverviewCard extends StatelessWidget {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.inbox_rounded,
-                      size: 48,
-                      color: AppColors.textSecondary.withValues(alpha: 0.5),
-                    ),
+                    Icon(Icons.inbox_rounded, size: 48, color: AppColors.textSecondary.withValues(alpha: 0.5)),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'No users to display',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -111,20 +87,14 @@ class DatabaseOverviewCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.surface1,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.adminAccent,
-                          width: 1,
-                        ),
+                        border: Border.all(color: AppColors.adminAccent, width: 1),
                       ),
                       child: Row(
                         children: [
                           Container(
                             width: 48,
                             height: 48,
-                            decoration: BoxDecoration(
-                              gradient: AppGradients.primary,
-                              shape: BoxShape.circle,
-                            ),
+                            decoration: BoxDecoration(gradient: AppGradients.primary, shape: BoxShape.circle),
                             child: Center(
                               child: Text(
                                 user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
@@ -147,9 +117,9 @@ class DatabaseOverviewCard extends StatelessWidget {
                                       child: Text(
                                         user.name,
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              color: AppColors.textPrimary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -195,9 +165,9 @@ class DatabaseOverviewCard extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 Text(
                                   user.email,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 Wrap(
@@ -210,8 +180,7 @@ class DatabaseOverviewCard extends StatelessWidget {
                                       value: user.isActive ? 'Active' : 'Inactive',
                                       color: user.isActive ? AppColors.success : AppColors.error,
                                     ),
-                                    if (user.trainerName != null)
-                                      _InfoChip(label: 'Trainer', value: user.trainerName!),
+                                    if (user.trainerName != null) _InfoChip(label: 'Trainer', value: user.trainerName!),
                                   ],
                                 ),
                               ],
@@ -248,11 +217,7 @@ class _InfoChip extends StatelessWidget {
   final String value;
   final Color? color;
 
-  const _InfoChip({
-    required this.label,
-    required this.value,
-    this.color,
-  });
+  const _InfoChip({required this.label, required this.value, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -261,31 +226,25 @@ class _InfoChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: (color ?? AppColors.primary).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: (color ?? AppColors.primary).withValues(alpha: 0.3),
-          width: 1,
-        ),
+        border: Border.all(color: (color ?? AppColors.primary).withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             '$label: ',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: color ?? AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: color ?? AppColors.textPrimary, fontWeight: FontWeight.bold),
           ),
         ],
       ),
     );
   }
 }
-

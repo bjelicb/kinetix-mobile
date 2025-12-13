@@ -10,14 +10,8 @@ import '../gradient_card.dart';
 class CalendarWorkoutItem extends StatelessWidget {
   final Workout workout;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
-  const CalendarWorkoutItem({
-    super.key,
-    required this.workout,
-    required this.onTap,
-    required this.onDelete,
-  });
+  const CalendarWorkoutItem({super.key, required this.workout, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +31,7 @@ class CalendarWorkoutItem extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                gradient: workout.isCompleted
-                    ? AppGradients.success
-                    : AppGradients.primary,
+                gradient: workout.isCompleted ? AppGradients.success : AppGradients.primary,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
@@ -54,32 +46,39 @@ class CalendarWorkoutItem extends StatelessWidget {
                 children: [
                   Text(
                     workout.name,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: AppSpacing.xs / 2),
-                  Text(
-                    CalendarUtils.formatTime(workout.scheduledDate),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time_rounded, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        CalendarUtils.formatTime(workout.scheduledDate),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                      ),
+                      if (workout.exercises.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        Icon(Icons.fitness_center_rounded, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${workout.exercises.length} ${workout.exercises.length == 1 ? 'exercise' : 'exercises'}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             if (workout.isCompleted)
-              const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.success,
+              const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(Icons.check_circle_rounded, color: AppColors.success, size: 24),
               ),
-            IconButton(
-              icon: const Icon(
-                Icons.delete_rounded,
-                color: AppColors.error,
-              ),
-              onPressed: onDelete,
-            ),
           ],
         ),
       ),
     );
   }
 }
-

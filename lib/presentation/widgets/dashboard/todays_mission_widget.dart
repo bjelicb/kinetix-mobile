@@ -16,10 +16,7 @@ import '../empty_state.dart';
 class TodaysMissionWidget extends ConsumerWidget {
   final Workout? todayWorkout;
 
-  const TodaysMissionWidget({
-    super.key,
-    required this.todayWorkout,
-  });
+  const TodaysMissionWidget({super.key, required this.todayWorkout});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,10 +28,7 @@ class TodaysMissionWidget extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Today's Mission",
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text("Today's Mission", style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.md),
           if (todayWorkout == null)
             EmptyState(
@@ -73,16 +67,14 @@ class TodaysMissionWidget extends ConsumerWidget {
                           children: [
                             Text(
                               todayWorkout!.name,
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.textPrimary),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               dashboard_date_utils.DateUtils.formatWorkoutDate(todayWorkout!.scheduledDate),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textPrimary.withValues(alpha: 0.8),
-                              ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.8)),
                             ),
                           ],
                         ),
@@ -94,11 +86,7 @@ class TodaysMissionWidget extends ConsumerWidget {
                             color: AppColors.success.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.check_circle_rounded,
-                            color: AppColors.success,
-                            size: 32,
-                          ),
+                          child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
                         ),
                     ],
                   ),
@@ -120,4 +108,3 @@ class TodaysMissionWidget extends ConsumerWidget {
     );
   }
 }
-
