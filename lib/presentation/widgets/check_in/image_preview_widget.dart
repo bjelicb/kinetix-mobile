@@ -12,12 +12,14 @@ class ImagePreviewWidget extends StatelessWidget {
   final XFile capturedImage;
   final VoidCallback onRetake;
   final VoidCallback onConfirm;
+  final VoidCallback? onClose;
 
   const ImagePreviewWidget({
     super.key,
     required this.capturedImage,
     required this.onRetake,
     required this.onConfirm,
+    this.onClose,
   });
 
   @override
@@ -55,26 +57,44 @@ class ImagePreviewWidget extends StatelessWidget {
           top: 20,
           left: 20,
           right: 20,
-          child: GlassContainer(
-            padding: const EdgeInsets.all(12),
-            onTap: onRetake,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.refresh_rounded,
-                  color: AppColors.textPrimary,
-                  size: 20,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Retake button
+              GlassContainer(
+                padding: const EdgeInsets.all(12),
+                onTap: onRetake,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.refresh_rounded,
+                      color: AppColors.textPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Retake',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Retake',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              ),
+              // Close button
+              if (onClose != null)
+                GlassContainer(
+                  borderRadius: 12,
+                  padding: const EdgeInsets.all(12),
+                  onTap: onClose,
+                  child: const Icon(
+                    Icons.close_rounded,
                     color: AppColors.textPrimary,
+                    size: 24,
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
 
@@ -91,6 +111,31 @@ class ImagePreviewWidget extends StatelessWidget {
                 onPressed: onConfirm,
                 gradient: AppGradients.success,
               ),
+              const SizedBox(height: 12),
+              // Skip button
+              if (onClose != null)
+                GlassContainer(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  onTap: onClose,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.skip_next_rounded,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Skip & Go to Workout',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),

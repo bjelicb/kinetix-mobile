@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -407,13 +408,23 @@ class RemoteDataSource {
   // Check-in Methods
   Future<Map<String, dynamic>> createCheckIn(Map<String, dynamic> data) async {
     try {
+      debugPrint('[RemoteDataSource] POST /checkins');
+      debugPrint('[RemoteDataSource] Request data: ${data.keys.join(", ")}');
+      
       final response = await _dio.post(ApiConstants.checkIns, data: data);
 
+      debugPrint('[RemoteDataSource] Response status: ${response.statusCode}');
+      debugPrint('[RemoteDataSource] Response data: ${response.data}');
+      
       if (response.data['success'] == true) {
+        debugPrint('[RemoteDataSource] ✅ Check-in created successfully');
         return response.data['data'];
       }
       throw Exception(response.data['message'] ?? 'Failed to create check-in');
     } on DioException catch (e) {
+      debugPrint('[RemoteDataSource] ❌ DioException: ${e.type}');
+      debugPrint('[RemoteDataSource] Status code: ${e.response?.statusCode}');
+      debugPrint('[RemoteDataSource] Error message: ${e.response?.data}');
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }

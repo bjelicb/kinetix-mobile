@@ -1,16 +1,18 @@
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:isar/isar.dart';
 
-// Conditional imports - only import Isar on non-web platforms
-// Isar is used via dynamic calls, no direct import needed
+// Conditional imports - only import Isar models on non-web platforms
 import '../models/user_collection.dart' if (dart.library.html) '../models/user_collection_stub.dart';
 import '../models/workout_collection.dart' if (dart.library.html) '../models/workout_collection_stub.dart';
 import '../models/exercise_collection.dart' if (dart.library.html) '../models/exercise_collection_stub.dart';
 import '../models/checkin_collection.dart' if (dart.library.html) '../models/checkin_collection_stub.dart';
 import '../models/plan_collection.dart' if (dart.library.html) '../models/plan_collection_stub.dart';
+// Conditional import for Isar extensions on web
+import '../models/isar_extensions.dart' if (dart.library.html) '../models/isar_extensions_stub.dart';
 import '../../services/isar_service.dart';
 
 class LocalDataSource {
-  Future<dynamic> get _isar async {
+  Future<Isar?> get _isar async {
     if (kIsWeb) return null;
     return await IsarService.instance;
   }
@@ -20,26 +22,22 @@ class LocalDataSource {
     if (kIsWeb) return null;
     final isar = await _isar;
     if (isar == null) return null;
-    // Use dynamic to avoid type errors on web
-    final isarInstance = isar;
-    return await (isarInstance as dynamic).userCollections.filter().serverIdEqualTo(serverId).findFirst();
+    return await isar.userCollections.filter().serverIdEqualTo(serverId).findFirst();
   }
   
   Future<List<UserCollection>> getUsers() async {
     if (kIsWeb) return [];
     final isar = await _isar;
     if (isar == null) return [];
-    final isarInstance = isar;
-    return await (isarInstance as dynamic).userCollections.where().findAll();
+    return await isar.userCollections.where().findAll();
   }
   
   Future<void> saveUser(UserCollection user) async {
     if (kIsWeb) return;
     final isar = await _isar;
     if (isar == null) return;
-    final isarInstance = isar;
-    await (isarInstance as dynamic).writeTxn(() async {
-      await (isarInstance as dynamic).userCollections.put(user);
+    await isar.writeTxn(() async {
+      await isar.userCollections.put(user);
     });
   }
   
@@ -48,33 +46,29 @@ class LocalDataSource {
     if (kIsWeb) return [];
     final isar = await _isar;
     if (isar == null) return [];
-    final isarInstance = isar;
-    return await (isarInstance as dynamic).workoutCollections.where().findAll();
+    return await isar.workoutCollections.where().findAll();
   }
   
   Future<WorkoutCollection?> getWorkoutById(int id) async {
     if (kIsWeb) return null;
     final isar = await _isar;
     if (isar == null) return null;
-    final isarInstance = isar;
-    return await (isarInstance as dynamic).workoutCollections.get(id);
+    return await isar.workoutCollections.get(id);
   }
   
   Future<WorkoutCollection?> getWorkoutByServerId(String serverId) async {
     if (kIsWeb) return null;
     final isar = await _isar;
     if (isar == null) return null;
-    final isarInstance = isar;
-    return await (isarInstance as dynamic).workoutCollections.filter().serverIdEqualTo(serverId).findFirst();
+    return await isar.workoutCollections.filter().serverIdEqualTo(serverId).findFirst();
   }
   
   Future<void> saveWorkout(WorkoutCollection workout) async {
     if (kIsWeb) return;
     final isar = await _isar;
     if (isar == null) return;
-    final isarInstance = isar;
-    await (isarInstance as dynamic).writeTxn(() async {
-      await (isarInstance as dynamic).workoutCollections.put(workout);
+    await isar.writeTxn(() async {
+      await isar.workoutCollections.put(workout);
     });
   }
   
@@ -82,17 +76,15 @@ class LocalDataSource {
     if (kIsWeb) return [];
     final isar = await _isar;
     if (isar == null) return [];
-    final isarInstance = isar;
-    return await (isarInstance as dynamic).workoutCollections.filter().isDirtyEqualTo(true).findAll();
+    return await isar.workoutCollections.filter().isDirtyEqualTo(true).findAll();
   }
   
   Future<void> deleteWorkout(int id) async {
     if (kIsWeb) return;
     final isar = await _isar;
     if (isar == null) return;
-    final isarInstance = isar;
-    await (isarInstance as dynamic).writeTxn(() async {
-      await (isarInstance as dynamic).workoutCollections.delete(id);
+    await isar.writeTxn(() async {
+      await isar.workoutCollections.delete(id);
     });
   }
   
@@ -101,22 +93,49 @@ class LocalDataSource {
     if (kIsWeb) return [];
     final isar = await _isar;
     if (isar == null) return [];
-    final isarInstance = isar;
-    final workout = await (isarInstance as dynamic).workoutCollections.get(workoutId);
+    final workout = await isar.workoutCollections.get(workoutId);
     if (workout == null) return [];
     
-    await (workout as dynamic).exercises.load();
-    return (workout as dynamic).exercises.toList();
+    await workout.exercises.load();
+    return workout.exercises.toList();
   }
   
   Future<void> saveExercise(ExerciseCollection exercise) async {
     if (kIsWeb) return;
     final isar = await _isar;
     if (isar == null) return;
-    final isarInstance = isar;
-    await (isarInstance as dynamic).writeTxn(() async {
-      await (isarInstance as dynamic).exerciseCollections.put(exercise);
+    await isar.writeTxn(() async {
+      await isar.exerciseCollections.put(exercise);
     });
+  }
+
+  /// Save exercises and link them to a workout
+  Future<void> saveExercisesForWorkout(int workoutId, List<ExerciseCollection> exercises) async {
+    if (kIsWeb) return;
+    final isar = await _isar;
+    if (isar == null) return;
+    
+    final workout = await isar.workoutCollections.get(workoutId);
+    if (workout == null) {
+      debugPrint('[LocalDataSource] Workout $workoutId not found, cannot save exercises');
+      return;
+    }
+    
+    await isar.writeTxn(() async {
+      // Clear existing exercise links
+      workout.exercises.clear();
+      
+      // Save each exercise and add to links
+      for (final exercise in exercises) {
+        await isar.exerciseCollections.put(exercise);
+        workout.exercises.add(exercise);
+      }
+      
+      // Save the links
+      await workout.exercises.save();
+    });
+    
+    debugPrint('[LocalDataSource] Saved ${exercises.length} exercises for workout $workoutId');
   }
   
   // CheckIn Operations
@@ -128,10 +147,7 @@ class LocalDataSource {
       return [];
     }
     try {
-      final isarInstance = isar;
-      // Use collection() directly instead of extension method (extensions don't work with dynamic)
-      final collection = isarInstance.collection<CheckInCollection>();
-      final all = await collection.where().findAll();
+      final all = await isar.checkInCollections.where().findAll();
       // Sort by timestamp descending (newest first)
       all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       debugPrint('[LocalDataSource] Loaded ${all.length} check-ins');
@@ -147,19 +163,15 @@ class LocalDataSource {
     if (kIsWeb) return null;
     final isar = await _isar;
     if (isar == null) return null;
-    final isarInstance = isar;
-    final collection = isarInstance.collection<CheckInCollection>();
-    return await collection.get(id);
+    return await isar.checkInCollections.get(id);
   }
   
   Future<void> deleteCheckIn(int id) async {
     if (kIsWeb) return;
     final isar = await _isar;
     if (isar == null) return;
-    final isarInstance = isar;
-    final collection = isarInstance.collection<CheckInCollection>();
-    await isarInstance.writeTxn(() async {
-      await collection.delete(id);
+    await isar.writeTxn(() async {
+      await isar.checkInCollections.delete(id);
     });
   }
   
@@ -167,18 +179,14 @@ class LocalDataSource {
     if (kIsWeb) return [];
     final isar = await _isar;
     if (isar == null) return [];
-    final isarInstance = isar;
-    final collection = isarInstance.collection<CheckInCollection>();
-    return await collection.filter().isSyncedEqualTo(false).findAll();
+    return await isar.checkInCollections.filter().isSyncedEqualTo(false).findAll();
   }
   
   Future<List<CheckInCollection>> getCheckInsWithoutPhotoUrl() async {
     if (kIsWeb) return [];
     final isar = await _isar;
     if (isar == null) return [];
-    final isarInstance = isar;
-    final collection = isarInstance.collection<CheckInCollection>();
-    return await collection.filter().photoUrlIsNull().findAll();
+    return await isar.checkInCollections.filter().photoUrlIsNull().findAll();
   }
   
   /// Get today's check-in if it exists
@@ -188,10 +196,7 @@ class LocalDataSource {
     if (isar == null) return null;
     
     final now = DateTime.now();
-    
-    final isarInstance = isar;
-    final collection = isarInstance.collection<CheckInCollection>();
-    final allCheckIns = await collection.where().findAll();
+    final allCheckIns = await isar.checkInCollections.where().findAll();
     
     // Find check-in for today
     for (final checkIn in allCheckIns) {
@@ -217,9 +222,7 @@ class LocalDataSource {
     if (isar == null) return [];
     
     final now = DateTime.now();
-    
-    final isarInstance = isar;
-    final allWorkouts = await (isarInstance as dynamic).workoutCollections.where().findAll();
+    final allWorkouts = await isar.workoutCollections.where().findAll();
     
     // Filter workouts for today
     final todayWorkouts = <WorkoutCollection>[];
@@ -240,14 +243,36 @@ class LocalDataSource {
   }
   
   Future<void> saveCheckIn(CheckInCollection checkIn) async {
-    if (kIsWeb) return;
+    debugPrint('[LocalDataSource] ═══════════════════════════════════════');
+    debugPrint('[LocalDataSource] saveCheckIn() START');
+    
+    if (kIsWeb) {
+      debugPrint('[LocalDataSource] Web platform - skipping Isar save');
+      debugPrint('[LocalDataSource] ═══════════════════════════════════════');
+      return;
+    }
+    
     final isar = await _isar;
-    if (isar == null) return;
-    final isarInstance = isar;
-    final collection = isarInstance.collection<CheckInCollection>();
-    await isarInstance.writeTxn(() async {
-      await collection.put(checkIn);
+    if (isar == null) {
+      debugPrint('[LocalDataSource] ❌ Isar is null - cannot save');
+      debugPrint('[LocalDataSource] ═══════════════════════════════════════');
+      return;
+    }
+    
+    debugPrint('[LocalDataSource] Check-in data to save:');
+    debugPrint('[LocalDataSource]   - Photo local path: ${checkIn.photoLocalPath}');
+    debugPrint('[LocalDataSource]   - Photo URL: ${checkIn.photoUrl}');
+    debugPrint('[LocalDataSource]   - Timestamp: ${checkIn.timestamp}');
+    debugPrint('[LocalDataSource]   - Is Synced: ${checkIn.isSynced}');
+    debugPrint('[LocalDataSource]   - GPS Latitude: ${checkIn.latitude ?? "NULL"}');
+    debugPrint('[LocalDataSource]   - GPS Longitude: ${checkIn.longitude ?? "NULL"}');
+    
+    await isar.writeTxn(() async {
+      await isar.checkInCollections.put(checkIn);
     });
+    
+    debugPrint('[LocalDataSource] ✅ Check-in saved successfully with ID: ${checkIn.id}');
+    debugPrint('[LocalDataSource] ═══════════════════════════════════════');
   }
   
   // Plan Operations
@@ -263,9 +288,7 @@ class LocalDataSource {
       return null;
     }
     try {
-      final isarInstance = isar;
-      final collection = isarInstance.collection<PlanCollection>();
-      final result = await collection.filter().planIdEqualTo(planId).findFirst();
+      final result = await isar.planCollections.filter().planIdEqualTo(planId).findFirst();
       if (result != null) {
         debugPrint('[LocalDataSource] ✓ Plan found: ${result.name} (ID: ${result.id})');
       } else {
@@ -290,9 +313,7 @@ class LocalDataSource {
       return [];
     }
     try {
-      final isarInstance = isar;
-      final collection = isarInstance.collection<PlanCollection>();
-      final result = await collection.where().findAll();
+      final result = await isar.planCollections.where().findAll();
       debugPrint('[LocalDataSource] ✓ Found ${result.length} plans in local database');
       for (final plan in result) {
         debugPrint('[LocalDataSource]   - Plan: ${plan.name} (ID: ${plan.planId}, Isar ID: ${plan.id})');
@@ -309,9 +330,7 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return [];
     try {
-      final isarInstance = isar;
-      final collection = isarInstance.collection<PlanCollection>();
-      return await collection.filter().trainerIdEqualTo(trainerId).findAll();
+      return await isar.planCollections.filter().trainerIdEqualTo(trainerId).findAll();
     } catch (e) {
       debugPrint('[LocalDataSource] ERROR getting plans by trainer: $e');
       return [];
@@ -323,9 +342,7 @@ class LocalDataSource {
     final isar = await _isar;
     if (isar == null) return [];
     try {
-      final isarInstance = isar;
-      final collection = isarInstance.collection<PlanCollection>();
-      return await collection.filter().isDirtyEqualTo(true).findAll();
+      return await isar.planCollections.filter().isDirtyEqualTo(true).findAll();
     } catch (e) {
       debugPrint('[LocalDataSource] ERROR getting dirty plans: $e');
       return [];
@@ -351,9 +368,7 @@ class LocalDataSource {
       final today = DateTime(now.year, now.month, now.day);
       
       // Get all workouts scheduled for today or in the future
-      final isarInstance = isar;
-      final workoutCollection = isarInstance.collection<WorkoutCollection>();
-      final futureWorkouts = await workoutCollection
+      final futureWorkouts = await isar.workoutCollections
           .filter()
           .scheduledDateGreaterThan(today.subtract(const Duration(days: 1)))
           .findAll();
@@ -366,8 +381,7 @@ class LocalDataSource {
       }
       
       // Get all plans and return the first one (assuming one active plan per user)
-      final planCollection = isarInstance.collection<PlanCollection>();
-      final plans = await planCollection.where().findAll();
+      final plans = await isar.planCollections.where().findAll();
       
       if (plans.isEmpty) {
         debugPrint('[LocalDataSource:ActivePlan] No plans found in database');
@@ -397,10 +411,8 @@ class LocalDataSource {
       return;
     }
     try {
-      final isarInstance = isar;
-      final collection = isarInstance.collection<PlanCollection>();
-      await isarInstance.writeTxn(() async {
-        await collection.put(plan);
+      await isar.writeTxn(() async {
+        await isar.planCollections.put(plan);
       });
       debugPrint('[LocalDataSource] ✓ Plan saved: ${plan.name} (planId: ${plan.planId}, Isar ID: ${plan.id})');
       debugPrint('[LocalDataSource] → isDirty: ${plan.isDirty}, workoutDays: ${plan.workoutDays.length}');

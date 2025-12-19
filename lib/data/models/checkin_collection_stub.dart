@@ -6,6 +6,10 @@ class CheckInCollection {
   DateTime timestamp = DateTime.now();
   bool isSynced = false;
   
+  // GPS coordinates
+  double? latitude;
+  double? longitude;
+  
   CheckInCollection();
   
   Map<String, dynamic> toJson() => {
@@ -13,6 +17,8 @@ class CheckInCollection {
         'photoUrl': photoUrl,
         'timestamp': timestamp.toIso8601String(),
         'isSynced': isSynced,
+        'latitude': latitude,
+        'longitude': longitude,
       };
 }
 

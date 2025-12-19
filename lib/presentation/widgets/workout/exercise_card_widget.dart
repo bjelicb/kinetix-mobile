@@ -17,6 +17,7 @@ class ExerciseCard extends StatelessWidget {
   final Function(String, int, int, String, Workout) onSaveValue;
   final Function(int, int, double?, Workout) onSaveRpe;
   final Function(int, int, Workout, Key) onDeleteSet;
+  final Function(int, int, Workout) onToggleSetCompletion;
 
   const ExerciseCard({
     super.key,
@@ -29,6 +30,7 @@ class ExerciseCard extends StatelessWidget {
     required this.onSaveValue,
     required this.onSaveRpe,
     required this.onDeleteSet,
+    required this.onToggleSetCompletion,
   });
 
   @override
@@ -54,7 +56,8 @@ class ExerciseCard extends StatelessWidget {
                     color: isExerciseCompleted
                         ? AppColors.success
                         : Colors.transparent,
-                    shape: BoxShape.circle,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: isExerciseCompleted
                           ? AppColors.success
@@ -81,11 +84,13 @@ class ExerciseCard extends StatelessWidget {
                       exercise.name,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      exercise.targetMuscle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    if (exercise.targetMuscle.isNotEmpty && exercise.targetMuscle != 'Unknown') ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        exercise.targetMuscle,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -108,6 +113,7 @@ class ExerciseCard extends StatelessWidget {
               onSaveValue: onSaveValue,
               onSaveRpe: onSaveRpe,
               onDeleteSet: onDeleteSet,
+              onToggleSetCompletion: onToggleSetCompletion,
             );
           }),
           

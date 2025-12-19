@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../data/datasources/local_data_source.dart';
 import '../data/datasources/remote_data_source.dart';
 import '../data/models/workout_collection.dart' if (dart.library.html) '../data/models/workout_collection_stub.dart';
+import '../data/models/exercise_collection.dart' if (dart.library.html) '../data/models/exercise_collection_stub.dart';
 import '../data/models/checkin_collection.dart' if (dart.library.html) '../data/models/checkin_collection_stub.dart';
 import '../data/mappers/plan_mapper.dart';
 import 'cloudinary_upload_service.dart';
@@ -459,11 +460,19 @@ class SyncManager {
     debugPrint('[SyncManager] _pullChanges() START');
 
     final users = await _localDataSource.getUsers();
+    final workouts = await _localDataSource.getWorkouts();
     DateTime lastSync;
 
-    if (users.isNotEmpty) {
+    // If Isar has no workouts, use a much older date to get all data (full sync)
+    final needsFullSync = workouts.isEmpty;
+    
+    if (needsFullSync) {
+      // Full sync - get all data from 1 year ago
+      lastSync = DateTime.now().subtract(const Duration(days: 365));
+      debugPrint('[SyncManager] → Isar is empty, performing FULL SYNC from: ${lastSync.toIso8601String()}');
+    } else if (users.isNotEmpty) {
       lastSync = users.first.lastSync;
-      debugPrint('[SyncManager] → Last sync from user: ${lastSync.toIso8601String()}');
+      debugPrint('[SyncManager] → Delta sync from last sync: ${lastSync.toIso8601String()}');
     } else {
       // Default to 7 days ago if no last sync
       lastSync = DateTime.now().subtract(const Duration(days: 7));
@@ -632,15 +641,48 @@ class SyncManager {
       workout.isDirty = false; // Server data is source of truth
       workout.updatedAt = updatedAt;
 
-      // Note: We need to handle exercises separately as they're stored as IsarLinks
-      // For now, we'll save the workout and exercises will be handled separately
-      // This is a limitation - we may need to refactor to store exercises differently
-
+      // Save workout first to get the ID
       await _localDataSource.saveWorkout(workout);
 
-      // TODO: Process and save exercises from completedExercises array
-      // This requires creating ExerciseCollection entries and linking them
-      // For now, exercises will be synced when user opens the workout
+      // Process and save exercises from planExercises or completedExercises
+      final exercisesToSave = <ExerciseCollection>[];
+      
+      // Try planExercises first (from backend enrichment)
+      if (workoutData['planExercises'] != null) {
+        final planExercises = workoutData['planExercises'] as List<dynamic>;
+        for (final exData in planExercises) {
+          final exercise = ExerciseCollection();
+          exercise.name = exData['name'] as String? ?? 'Exercise';
+          exercise.targetMuscle = exData['targetMuscle'] as String? ?? 'Unknown';
+          // Add planned sets info as WorkoutSet objects
+          final planSets = exData['sets'] as int? ?? 3;
+          final planReps = exData['reps'] as int? ?? 10;
+          exercise.sets = List.generate(planSets, (i) => WorkoutSet()
+            ..id = 'planned-${i + 1}'
+            ..weight = 0
+            ..reps = planReps
+            ..isCompleted = false
+          );
+          exercisesToSave.add(exercise);
+        }
+        debugPrint('[SyncManager] → Parsed ${exercisesToSave.length} exercises from planExercises');
+      } else if (workoutData['completedExercises'] != null) {
+        // Fallback: use completedExercises if planExercises not available
+        final completedExercises = workoutData['completedExercises'] as List<dynamic>;
+        for (final exData in completedExercises) {
+          final exercise = ExerciseCollection();
+          exercise.name = exData['exerciseName'] as String? ?? 'Exercise';
+          exercise.targetMuscle = 'Unknown';
+          exercise.sets = [];
+          exercisesToSave.add(exercise);
+        }
+        debugPrint('[SyncManager] → Parsed ${exercisesToSave.length} exercises from completedExercises');
+      }
+      
+      // Save exercises and link to workout
+      if (exercisesToSave.isNotEmpty) {
+        await _localDataSource.saveExercisesForWorkout(workout.id, exercisesToSave);
+      }
     } catch (e) {
       debugPrint('Error processing server workout log: $e');
     }

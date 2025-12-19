@@ -17,17 +17,24 @@ class ImageCompressionService {
       return imageBytes; // Return original if decode fails
     }
 
-    // Resize to max 1920x1920 while maintaining aspect ratio
-    final resizedImage = img.copyResize(
-      originalImage,
-      width: originalImage.width > 1920 ? 1920 : null,
-      height: originalImage.height > 1920 ? 1920 : null,
-      maintainAspect: true,
-    );
+    img.Image imageToCompress;
+    
+    // Only resize if image is larger than 1920 in any dimension
+    if (originalImage.width > 1920 || originalImage.height > 1920) {
+      // Resize to max 1920 on the larger dimension while maintaining aspect ratio
+      if (originalImage.width >= originalImage.height) {
+        imageToCompress = img.copyResize(originalImage, width: 1920);
+      } else {
+        imageToCompress = img.copyResize(originalImage, height: 1920);
+      }
+    } else {
+      // Image is already small enough, no resize needed
+      imageToCompress = originalImage;
+    }
 
     // Compress to JPEG with 85% quality
     return Uint8List.fromList(
-      img.encodeJpg(resizedImage, quality: 85),
+      img.encodeJpg(imageToCompress, quality: 85),
     );
   }
 

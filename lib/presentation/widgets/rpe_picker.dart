@@ -152,7 +152,9 @@ class _RpePickerState extends State<RpePicker> with SingleTickerProviderStateMix
                         _selectedRpe = rpe;
                       });
                       _animationController.forward(from: 0.0).then((_) {
-                        _animationController.reverse();
+                        if (mounted && _animationController.isAnimating) {
+                          _animationController.reverse();
+                        }
                       });
                       widget.onRpeSelected(rpe);
                     },

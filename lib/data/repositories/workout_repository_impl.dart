@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:uuid/uuid.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/entities/exercise.dart' as domain;
 import '../../domain/repositories/workout_repository.dart';
@@ -38,22 +39,17 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         // Parse response - handle both direct array and wrapped format
         List<dynamic> workoutLogsData = [];
         if (response is List) {
-          // Direct array response
           workoutLogsData = response;
         } else if (response is Map<String, dynamic>) {
-          // Wrapped response: {data: [...]}
           final data = response['data'];
           if (data is List) {
             workoutLogsData = data;
           } else {
-            debugPrint(
-              '[WorkoutRepositoryImpl] → Warning: response.data is not a List, type: ${data?.runtimeType ?? 'null'}',
-            );
-            debugPrint('[WorkoutRepositoryImpl] → Response keys: ${response.keys.join(", ")}');
+            debugPrint('[WorkoutRepositoryImpl] → Warning: response.data is not a List');
             return [];
           }
         } else {
-          debugPrint('[WorkoutRepositoryImpl] → Warning: Unexpected response type: ${response.runtimeType}');
+          debugPrint('[WorkoutRepositoryImpl] → Warning: Unexpected response type');
           return [];
         }
 
@@ -63,55 +59,164 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         for (var i = 0; i < workoutLogsData.length; i++) {
           try {
             final logData = workoutLogsData[i] as Map<String, dynamic>;
-            debugPrint('[WorkoutRepositoryImpl] → Converting workout log ${i + 1}/${workoutLogsData.length}');
-
-            // Convert WorkoutLog to Workout entity
             final workout = _workoutLogFromServerData(logData);
             workouts.add(workout);
-
-            debugPrint(
-              '[WorkoutRepositoryImpl] ✓ Converted: ${workout.name} (${workout.scheduledDate.toIso8601String()}), isCompleted: ${workout.isCompleted}, isMissed: ${workout.isMissed}, isRestDay: ${workout.isRestDay}',
-            );
-          } catch (e, stackTrace) {
+            debugPrint('[WorkoutRepositoryImpl] ✓ Converted: ${workout.name}, exercises: ${workout.exercises.length}');
+          } catch (e) {
             debugPrint('[WorkoutRepositoryImpl] ✗ Failed to convert workout log ${i + 1}: $e');
-            debugPrint('[WorkoutRepositoryImpl] → Stack trace: $stackTrace');
           }
         }
 
         debugPrint('[WorkoutRepositoryImpl] → Total converted: ${workouts.length}/${workoutLogsData.length}');
         debugPrint('═══════════════════════════════════════════════════════════');
         return workouts;
-      } catch (e, stackTrace) {
+      } catch (e) {
         debugPrint('[WorkoutRepositoryImpl] ✗ Error loading workouts from API: $e');
-        debugPrint('[WorkoutRepositoryImpl] → Stack trace: $stackTrace');
         return [];
       }
     }
 
-    // Mobile platform: load from Isar
+    // Mobile platform: load from Isar, fetch from API if empty
     debugPrint('[WorkoutRepositoryImpl] → Mobile platform - loading from Isar');
     try {
-      final List<WorkoutCollection> collections = await _localDataSource.getWorkouts();
+      List<WorkoutCollection> collections = await _localDataSource.getWorkouts();
       debugPrint('[WorkoutRepositoryImpl] → Found ${collections.length} workout logs in Isar');
+
+      // If Isar is empty and we have remote data source, fetch from API
+      if (collections.isEmpty && _remoteDataSource != null) {
+        debugPrint('[WorkoutRepositoryImpl] → Isar empty, fetching from API...');
+        try {
+          final today = DateTime.now();
+          final dateStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final response = await _remoteDataSource.getWeekWorkouts(dateStr);
+          
+          List<dynamic> workoutLogsData = [];
+          if (response is List) {
+            workoutLogsData = response;
+          } else if (response is Map<String, dynamic>) {
+            final data = response['data'];
+            if (data is List) {
+              workoutLogsData = data;
+            }
+          }
+          
+          debugPrint('[WorkoutRepositoryImpl] → API returned ${workoutLogsData.length} workout logs');
+          
+          // Save to Isar (workouts AND exercises)
+          int savedCount = 0;
+          int exerciseCount = 0;
+          for (final logData in workoutLogsData) {
+            try {
+              final data = logData as Map<String, dynamic>;
+              final collection = _workoutLogToCollection(data);
+              await _localDataSource.saveWorkout(collection);
+              savedCount++;
+              debugPrint('[WorkoutRepositoryImpl] → Saved workout: ${collection.name} (ID: ${collection.id})');
+              
+              // After saveWorkout, collection.id should have the Isar-assigned ID
+              if (collection.id > 0) {
+                final exerciseCollections = _extractExercisesFromLogData(data);
+                if (exerciseCollections.isNotEmpty) {
+                  await _localDataSource.saveExercisesForWorkout(collection.id, exerciseCollections);
+                  exerciseCount += exerciseCollections.length;
+                  debugPrint('[WorkoutRepositoryImpl] → Saved ${exerciseCollections.length} exercises for workout ${collection.name}');
+                }
+              }
+            } catch (e) {
+              debugPrint('[WorkoutRepositoryImpl] ✗ Failed to save workout: $e');
+            }
+          }
+          
+          debugPrint('[WorkoutRepositoryImpl] ✓ Saved $savedCount workouts with $exerciseCount total exercises');
+          collections = await _localDataSource.getWorkouts();
+          debugPrint('[WorkoutRepositoryImpl] → After API sync, found ${collections.length} workout logs in Isar');
+        } catch (e) {
+          debugPrint('[WorkoutRepositoryImpl] ✗ API fetch failed: $e');
+        }
+      }
 
       final workouts = <Workout>[];
       for (final WorkoutCollection collection in collections) {
         try {
           final List<ExerciseCollection> exercises = await _localDataSource.getExercisesForWorkout(collection.id);
+          debugPrint('[WorkoutRepositoryImpl] → Workout "${collection.name}" has ${exercises.length} exercises in Isar');
           final exerciseEntities = exercises.map((e) => ExerciseMapper.toEntity(e)).toList();
           workouts.add(WorkoutMapper.toEntity(collection, exerciseEntities));
         } catch (e) {
+          debugPrint('[WorkoutRepositoryImpl] → Error loading exercises for workout ${collection.id}: $e');
           workouts.add(WorkoutMapper.toEntity(collection, []));
         }
       }
 
-      debugPrint('[WorkoutRepositoryImpl] → Converted ${workouts.length} workout logs');
+      debugPrint('[WorkoutRepositoryImpl] → Converted ${workouts.length} workout logs with exercises');
       debugPrint('═══════════════════════════════════════════════════════════');
       return workouts;
     } catch (e) {
       debugPrint('[WorkoutRepositoryImpl] ✗ Error loading workouts from Isar: $e');
       return [];
     }
+  }
+  
+  /// Convert server workout log data to WorkoutCollection for Isar storage
+  WorkoutCollection _workoutLogToCollection(Map<String, dynamic> logData) {
+    final collection = WorkoutCollection();
+    collection.serverId = logData['_id']?.toString() ?? '';
+    collection.name = logData['workoutName'] as String? ?? 
+        (logData['weeklyPlanId'] is Map ? (logData['weeklyPlanId'] as Map)['name'] as String? : null) ?? 
+        'Workout';
+    collection.scheduledDate = DateTime.parse(logData['workoutDate'] as String);
+    collection.isCompleted = logData['isCompleted'] as bool? ?? false;
+    collection.isMissed = logData['isMissed'] as bool? ?? false;
+    collection.isRestDay = logData['isRestDay'] as bool? ?? false;
+    collection.isDirty = false;
+    collection.updatedAt = logData['updatedAt'] != null 
+        ? DateTime.parse(logData['updatedAt'] as String) 
+        : DateTime.now();
+    return collection;
+  }
+
+  /// Extract exercises from server workout log data for Isar storage
+  List<ExerciseCollection> _extractExercisesFromLogData(Map<String, dynamic> logData) {
+    final exercises = <ExerciseCollection>[];
+    
+    // Try planExercises first (from plan template)
+    if (logData['planExercises'] != null && logData['planExercises'] is List) {
+      final planExercises = logData['planExercises'] as List<dynamic>;
+      for (final exData in planExercises) {
+        if (exData is Map<String, dynamic>) {
+          final exercise = ExerciseCollection();
+          exercise.name = exData['name'] as String? ?? 'Exercise';
+          exercise.targetMuscle = exData['targetMuscle'] as String? ?? '';
+          exercise.sets = []; // Plan exercises don't have completed sets yet
+          // Store plan metadata for display
+          exercise.planSets = exData['sets'] as int?;
+          exercise.planReps = exData['reps']?.toString();
+          exercise.restSeconds = exData['restSeconds'] as int?;
+          exercise.notes = exData['notes'] as String?;
+          exercise.videoUrl = exData['videoUrl'] as String?;
+          exercises.add(exercise);
+        }
+      }
+    } 
+    // Fallback to completedExercises (for completed workouts)
+    else if (logData['completedExercises'] != null && logData['completedExercises'] is List) {
+      final completedExercises = logData['completedExercises'] as List<dynamic>;
+      for (final exData in completedExercises) {
+        if (exData is Map<String, dynamic>) {
+          final exercise = ExerciseCollection();
+          exercise.name = exData['exerciseName'] as String? ?? 'Exercise';
+          exercise.targetMuscle = exData['targetMuscle'] as String? ?? '';
+          exercise.sets = [];
+          // completedExercises have different structure - actualSets, actualReps, weightUsed
+          exercise.planSets = exData['actualSets'] as int?;
+          exercise.notes = exData['notes'] as String?;
+          exercises.add(exercise);
+        }
+      }
+    }
+    
+    return exercises;
   }
 
   // Helper method to convert server WorkoutLog to Workout entity
@@ -136,16 +241,48 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     if (logData['planExercises'] != null) {
       final planExercises = logData['planExercises'] as List<dynamic>;
       for (final exData in planExercises) {
+        final planSets = exData['sets'] as int?;
+        final planReps = exData['reps'];
+        
+        // Generate sets based on planSets and planReps (similar to ExerciseMapper logic)
+        List<domain.WorkoutSet> sets = [];
+        if (planSets != null && planSets > 0) {
+          // Parse planReps to get default reps value
+          int defaultReps = 0;
+          if (planReps != null) {
+            if (planReps is int) {
+              defaultReps = planReps;
+            } else if (planReps is String) {
+              // Parse string like "10" or "10-12" - take first number
+              final match = RegExp(r'(\d+)').firstMatch(planReps);
+              if (match != null) {
+                defaultReps = int.tryParse(match.group(1) ?? '0') ?? 0;
+              }
+            }
+          }
+          
+          // Generate empty sets based on planSets
+          sets = List.generate(planSets, (index) {
+            return domain.WorkoutSet(
+              id: const Uuid().v4(), // Generate unique UUID for each set
+              weight: 0.0,
+              reps: defaultReps,
+              rpe: null,
+              isCompleted: false,
+            );
+          });
+        }
+        
         exercises.add(
           domain.Exercise(
             id: '',
             name: exData['name'] as String? ?? 'Exercise',
-            targetMuscle: 'Unknown',
-            sets: [], // Sets will be populated from completedExercises if workout is started/completed
+            targetMuscle: exData['targetMuscle'] as String? ?? '',
+            sets: sets,
             restSeconds: exData['restSeconds'] as int?,
             notes: exData['notes'] as String?,
-            planSets: exData['sets'] as int?,
-            planReps: exData['reps'],
+            planSets: planSets,
+            planReps: planReps,
           ),
         );
       }
@@ -157,7 +294,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
           domain.Exercise(
             id: '',
             name: exData['exerciseName'] as String? ?? 'Exercise',
-            targetMuscle: 'Unknown',
+            targetMuscle: exData['targetMuscle'] as String? ?? '',
             sets: [],
           ),
         );
@@ -207,6 +344,15 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
 
   @override
   Future<Workout> updateWorkout(Workout workout) async {
+    // On web platform, workouts are loaded from API and stored in memory only
+    // We can't update them in Isar (which doesn't exist on web)
+    // For now, just return the updated workout - it will be in memory state
+    // TODO: In the future, we might want to sync updates to the backend API
+    if (kIsWeb) {
+      debugPrint('[WorkoutRepositoryImpl] updateWorkout on web - returning workout (no local storage)');
+      return workout;
+    }
+    
     final isarId = int.tryParse(workout.id);
     if (isarId == null) throw Exception('Invalid workout ID');
 

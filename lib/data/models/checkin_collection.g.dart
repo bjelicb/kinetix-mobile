@@ -22,18 +22,28 @@ const CheckInCollectionSchema = CollectionSchema(
       name: r'isSynced',
       type: IsarType.bool,
     ),
-    r'photoLocalPath': PropertySchema(
+    r'latitude': PropertySchema(
       id: 1,
+      name: r'latitude',
+      type: IsarType.double,
+    ),
+    r'longitude': PropertySchema(
+      id: 2,
+      name: r'longitude',
+      type: IsarType.double,
+    ),
+    r'photoLocalPath': PropertySchema(
+      id: 3,
       name: r'photoLocalPath',
       type: IsarType.string,
     ),
     r'photoUrl': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'photoUrl',
       type: IsarType.string,
     ),
     r'timestamp': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'timestamp',
       type: IsarType.dateTime,
     )
@@ -89,9 +99,11 @@ void _checkInCollectionSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeBool(offsets[0], object.isSynced);
-  writer.writeString(offsets[1], object.photoLocalPath);
-  writer.writeString(offsets[2], object.photoUrl);
-  writer.writeDateTime(offsets[3], object.timestamp);
+  writer.writeDouble(offsets[1], object.latitude);
+  writer.writeDouble(offsets[2], object.longitude);
+  writer.writeString(offsets[3], object.photoLocalPath);
+  writer.writeString(offsets[4], object.photoUrl);
+  writer.writeDateTime(offsets[5], object.timestamp);
 }
 
 CheckInCollection _checkInCollectionDeserialize(
@@ -103,9 +115,11 @@ CheckInCollection _checkInCollectionDeserialize(
   final object = CheckInCollection();
   object.id = id;
   object.isSynced = reader.readBool(offsets[0]);
-  object.photoLocalPath = reader.readString(offsets[1]);
-  object.photoUrl = reader.readStringOrNull(offsets[2]);
-  object.timestamp = reader.readDateTime(offsets[3]);
+  object.latitude = reader.readDoubleOrNull(offsets[1]);
+  object.longitude = reader.readDoubleOrNull(offsets[2]);
+  object.photoLocalPath = reader.readString(offsets[3]);
+  object.photoUrl = reader.readStringOrNull(offsets[4]);
+  object.timestamp = reader.readDateTime(offsets[5]);
   return object;
 }
 
@@ -119,10 +133,14 @@ P _checkInCollectionDeserializeProp<P>(
     case 0:
       return (reader.readBool(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 2:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
+      return (reader.readStringOrNull(offset)) as P;
+    case 5:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -389,6 +407,174 @@ extension CheckInCollectionQueryFilter
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isSynced',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      latitudeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'latitude',
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      latitudeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'latitude',
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      latitudeEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'latitude',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      latitudeGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'latitude',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      latitudeLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'latitude',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      latitudeBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'latitude',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      longitudeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'longitude',
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      longitudeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'longitude',
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      longitudeEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'longitude',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      longitudeGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'longitude',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      longitudeLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'longitude',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterFilterCondition>
+      longitudeBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'longitude',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
       ));
     });
   }
@@ -763,6 +949,34 @@ extension CheckInCollectionQuerySortBy
   }
 
   QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      sortByLatitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'latitude', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      sortByLatitudeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'latitude', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      sortByLongitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'longitude', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      sortByLongitudeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'longitude', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
       sortByPhotoLocalPath() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'photoLocalPath', Sort.asc);
@@ -835,6 +1049,34 @@ extension CheckInCollectionQuerySortThenBy
   }
 
   QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      thenByLatitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'latitude', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      thenByLatitudeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'latitude', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      thenByLongitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'longitude', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
+      thenByLongitudeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'longitude', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QAfterSortBy>
       thenByPhotoLocalPath() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'photoLocalPath', Sort.asc);
@@ -887,6 +1129,20 @@ extension CheckInCollectionQueryWhereDistinct
   }
 
   QueryBuilder<CheckInCollection, CheckInCollection, QDistinct>
+      distinctByLatitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'latitude');
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QDistinct>
+      distinctByLongitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'longitude');
+    });
+  }
+
+  QueryBuilder<CheckInCollection, CheckInCollection, QDistinct>
       distinctByPhotoLocalPath({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'photoLocalPath',
@@ -920,6 +1176,20 @@ extension CheckInCollectionQueryProperty
   QueryBuilder<CheckInCollection, bool, QQueryOperations> isSyncedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isSynced');
+    });
+  }
+
+  QueryBuilder<CheckInCollection, double?, QQueryOperations>
+      latitudeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'latitude');
+    });
+  }
+
+  QueryBuilder<CheckInCollection, double?, QQueryOperations>
+      longitudeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'longitude');
     });
   }
 

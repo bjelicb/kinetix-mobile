@@ -1,6 +1,5 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/gradients.dart';
 import '../../widgets/glass_container.dart';
@@ -66,13 +65,7 @@ class CameraPreviewWidget extends StatelessWidget {
               GlassContainer(
                 borderRadius: 12,
                 padding: const EdgeInsets.all(12),
-                onTap: () {
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
-                  } else {
-                    context.go('/home');
-                  }
-                },
+                onTap: onClose,
                 child: const Icon(
                   Icons.close_rounded,
                   color: AppColors.textPrimary,
@@ -165,6 +158,32 @@ class CameraPreviewWidget extends StatelessWidget {
                   // Placeholder for symmetry
                   const SizedBox(width: 60),
                 ],
+              ),
+              
+              // Skip button
+              const SizedBox(height: 16),
+              GlassContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                margin: const EdgeInsets.only(top: 12),
+                onTap: onClose,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.skip_next_rounded,
+                      color: AppColors.textPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Skip & Go to Workout',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

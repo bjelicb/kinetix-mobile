@@ -1,4 +1,23 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- GPS Location Permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    
+    <!-- Camera Permission for Check-in Photos -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    
+    <!-- Internet Permission for API Calls -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- Storage Permissions for Photo Saving -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+                     android:maxSdkVersion="32"
+                     tools:replace="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+                     android:maxSdkVersion="32"
+                     tools:replace="android:maxSdkVersion" />
+    
     <application
         android:label="kinetix_mobile"
         android:name="${applicationName}"

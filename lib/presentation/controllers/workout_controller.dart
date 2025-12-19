@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../../domain/entities/workout.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../../data/repositories/workout_repository_impl.dart';
@@ -38,8 +39,29 @@ class WorkoutController extends _$WorkoutController {
   }
 
   Future<Workout> updateWorkout(Workout workout) async {
+    debugPrint('[WorkoutController] updateWorkout START - Workout: ${workout.name}, ID: ${workout.id}');
     final updated = await _repository.updateWorkout(workout);
-    state = AsyncValue.data(await _repository.getWorkouts());
+    debugPrint('[WorkoutController] Repository updateWorkout completed');
+    
+    // Directly update state on BOTH web and mobile instead of reloading
+    // This prevents losing changes that haven't been saved yet
+    final currentWorkouts = state.valueOrNull ?? [];
+    debugPrint('[WorkoutController] Current workouts count: ${currentWorkouts.length}');
+    
+    final updatedWorkouts = currentWorkouts.map((w) {
+      // Match by id OR serverId
+      final isMatch = w.id == workout.id || w.serverId == workout.id || w.id == workout.serverId;
+      if (isMatch) {
+        debugPrint('[WorkoutController] Matched workout: ${w.name} (id:${w.id}, serverId:${w.serverId})');
+        return updated;
+      }
+      return w;
+    }).toList();
+    
+    debugPrint('[WorkoutController] Updated workouts list, setting state...');
+    state = AsyncValue.data(updatedWorkouts);
+    debugPrint('[WorkoutController] ✅ State updated successfully');
+    
     return updated;
   }
 

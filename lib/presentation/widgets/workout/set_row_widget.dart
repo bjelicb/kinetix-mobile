@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/gradients.dart';
-import '../../../core/utils/haptic_feedback.dart';
 import '../../../domain/entities/exercise.dart';
 import '../../../domain/entities/workout.dart';
 import 'workout_input_field_widget.dart';
@@ -15,6 +14,7 @@ class SetRow extends StatelessWidget {
   final Function(String, int, int, String, Workout) onSaveValue;
   final Function(int, int, double?, Workout) onSaveRpe;
   final Function(int, int, Workout, Key) onDeleteSet;
+  final Function(int, int, Workout) onToggleSetCompletion;
 
   const SetRow({
     super.key,
@@ -26,6 +26,7 @@ class SetRow extends StatelessWidget {
     required this.onSaveValue,
     required this.onSaveRpe,
     required this.onDeleteSet,
+    required this.onToggleSetCompletion,
   });
 
   @override
@@ -119,8 +120,7 @@ class SetRow extends StatelessWidget {
             // Complete Checkbox
             GestureDetector(
               onTap: () {
-                AppHaptic.selection();
-                // TODO: Toggle set completion
+                onToggleSetCompletion(exerciseIndex, setIndex, workout);
               },
               child: Container(
                 width: 32,
@@ -129,7 +129,8 @@ class SetRow extends StatelessWidget {
                   color: set.isCompleted
                       ? AppColors.success
                       : Colors.transparent,
-                  shape: BoxShape.circle,
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: set.isCompleted
                         ? AppColors.success

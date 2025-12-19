@@ -29,7 +29,13 @@ class WorkoutHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 icon: const Icon(
                   Icons.close_rounded,
                   color: AppColors.textPrimary,

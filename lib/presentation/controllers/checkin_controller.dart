@@ -30,7 +30,7 @@ class CheckInController extends _$CheckInController {
   /// Check if user should be required to check in
   /// Returns true if:
   /// - User is a CLIENT (not TRAINER)
-  /// - User has a workout scheduled for today
+  /// - User has a workout scheduled for today (NOT a rest day)
   /// - The workout is NOT completed
   /// - User has NOT already checked in today
   Future<bool> shouldRequireCheckIn(User? user) async {
@@ -50,9 +50,15 @@ class CheckInController extends _$CheckInController {
     // No workouts today, no check-in required
     if (todayWorkouts.isEmpty) return false;
     
-    // Check if any workout is not completed
+    // Filter out rest days - rest days don't require check-in
+    final nonRestDayWorkouts = todayWorkouts.where((workout) => !workout.isRestDay).toList();
+    
+    // If only rest days today, no check-in required
+    if (nonRestDayWorkouts.isEmpty) return false;
+    
+    // Check if any non-rest-day workout is not completed
     // If all workouts are completed, no check-in required
-    final hasIncompleteWorkout = todayWorkouts.any((workout) => !workout.isCompleted);
+    final hasIncompleteWorkout = nonRestDayWorkouts.any((workout) => !workout.isCompleted);
     
     return hasIncompleteWorkout;
   }

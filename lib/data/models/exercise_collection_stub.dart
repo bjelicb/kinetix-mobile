@@ -15,6 +15,13 @@ class ExerciseCollection {
   String targetMuscle = '';
   List<WorkoutSet> sets = [];
   
+  // Plan exercise metadata (from weekly plan) - must match real model
+  int? planSets;        // Planned number of sets
+  String? planReps;     // Planned reps (can be "10-12")
+  int? restSeconds;     // Rest time in seconds
+  String? notes;        // Exercise notes
+  String? videoUrl;     // Video tutorial URL
+  
   ExerciseCollection();
 }
 

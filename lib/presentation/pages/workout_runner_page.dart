@@ -56,18 +56,36 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
   }
 
   Future<void> _checkCheckInStatus() async {
+    debugPrint('[WorkoutRunner] =====================================');
+    debugPrint('[WorkoutRunner] _checkCheckInStatus() START');
+    debugPrint('[WorkoutRunner] Workout ID: ${widget.workoutId}');
+    debugPrint('[WorkoutRunner] =====================================');
+    
     final result = await WorkoutValidationService.checkCheckInStatus();
+    
+    debugPrint('[WorkoutRunner] Check-in validation result: ${result.hasValidCheckIn}');
+    debugPrint('[WorkoutRunner] Has check-in entity: ${result.checkIn != null}');
 
-    if (!mounted) return;
+    if (!mounted) {
+      debugPrint('[WorkoutRunner] Widget not mounted - returning');
+      return;
+    }
 
     setState(() {
       _hasValidCheckIn = result.hasValidCheckIn;
       _checkingCheckIn = false;
     });
+    
+    debugPrint('[WorkoutRunner] State updated - _hasValidCheckIn: $_hasValidCheckIn');
+    debugPrint('[WorkoutRunner] State updated - _checkingCheckIn: $_checkingCheckIn');
 
     if (!_hasValidCheckIn && mounted) {
+      debugPrint('[WorkoutRunner] ⚠️ NO VALID CHECK-IN - Showing check-in required and redirecting');
       WorkoutValidationService.showCheckInRequired(context);
+    } else {
+      debugPrint('[WorkoutRunner] ✅ VALID CHECK-IN - Allowing access to workout runner');
     }
+    debugPrint('[WorkoutRunner] =====================================');
   }
 
   void _showNumpad(String field, int exerciseIndex, int setIndex, String initialValue, Workout workout) {
@@ -202,27 +220,56 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
     );
   }
 
+  void _toggleSetCompletion(int exerciseIndex, int setIndex, Workout workout) {
+    WorkoutStateService.toggleSetCompletion(
+      exerciseIndex: exerciseIndex,
+      setIndex: setIndex,
+      workout: workout,
+      ref: ref,
+    );
+  }
+
   Future<void> _finishWorkout(Workout workout) async {
+    debugPrint('[WorkoutRunner:Finish] ═══════════════════════════════════════');
+    debugPrint('[WorkoutRunner:Finish] _finishWorkout() START');
+    debugPrint('[WorkoutRunner:Finish] Workout: ${workout.name} (ID: ${workout.id})');
+    debugPrint('[WorkoutRunner:Finish] Calling WorkoutStateService.finishWorkout()...');
+    
     await WorkoutStateService.finishWorkout(
       workout: workout,
       ref: ref,
       context: context,
       confettiController: _confettiController!,
     );
+    
+    debugPrint('[WorkoutRunner:Finish] ✅ Workout finished successfully');
+    debugPrint('[WorkoutRunner:Finish] Playing confetti animation...');
+    debugPrint('[WorkoutRunner:Finish] Waiting 2 seconds before navigation...');
 
     // Navigate back after animation
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
+        debugPrint('[WorkoutRunner:Finish] Navigating to home...');
         context.go('/home');
+      } else {
+        debugPrint('[WorkoutRunner:Finish] ⚠️ Widget not mounted - skipping navigation');
       }
+      debugPrint('[WorkoutRunner:Finish] ═══════════════════════════════════════');
     });
   }
 
   @override
   void dispose() {
+    debugPrint('[WorkoutRunner] ═══════════════════════════════════════');
+    debugPrint('[WorkoutRunner] dispose() - Cleaning up resources');
+    debugPrint('[WorkoutRunner] Disposing timer service...');
     _timerService.dispose();
+    debugPrint('[WorkoutRunner] Disposing confetti controller...');
     _confettiController?.dispose();
+    debugPrint('[WorkoutRunner] Disposing scroll controller...');
     _scrollController.dispose();
+    debugPrint('[WorkoutRunner] ✅ Cleanup complete');
+    debugPrint('[WorkoutRunner] ═══════════════════════════════════════');
     super.dispose();
   }
 
@@ -232,6 +279,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
 
     // Show loading if checking check-in status
     if (_checkingCheckIn) {
+      debugPrint('[WorkoutRunner:Build] Still checking check-in status - showing loader');
       return GradientBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
@@ -242,8 +290,11 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
 
     // Show message if no valid check-in
     if (!_hasValidCheckIn) {
+      debugPrint('[WorkoutRunner:Build] ⚠️ NO VALID CHECK-IN - showing CheckInRequiredWidget');
       return const CheckInRequiredWidget();
     }
+    
+    debugPrint('[WorkoutRunner:Build] ✅ Valid check-in confirmed - rendering workout runner');
 
     return GradientBackground(
       child: Scaffold(
@@ -255,7 +306,29 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
                 return Center(child: Text('No workouts available', style: Theme.of(context).textTheme.bodyLarge));
               }
 
-              final workout = workouts.firstWhere((w) => w.id == widget.workoutId, orElse: () => workouts.first);
+              // Try to find workout by ID, with fallback to serverId match, then first workout
+              debugPrint('[WorkoutRunner] Looking for workout with ID: ${widget.workoutId}');
+              debugPrint('[WorkoutRunner] Available workout IDs: ${workouts.map((w) => 'id:${w.id},serverId:${w.serverId}').join(" | ")}');
+              
+              // First try exact ID match
+              Workout workout = workouts.firstWhere(
+                (w) => w.id == widget.workoutId,
+                orElse: () {
+                  // Fallback to serverId match
+                  try {
+                    final found = workouts.firstWhere((w) => w.serverId == widget.workoutId);
+                    debugPrint('[WorkoutRunner] Found workout by serverId: ${found.name}');
+                    return found;
+                  } catch (e) {
+                    // Final fallback to first workout
+                    debugPrint('[WorkoutRunner] No match found, using first workout');
+                    return workouts.first;
+                  }
+                },
+              );
+              if (workout.id == widget.workoutId) {
+                debugPrint('[WorkoutRunner] Found workout by ID: ${workout.name}');
+              }
 
               // Initialize keys for all exercises if not already done
               for (int i = 0; i < workout.exercises.length; i++) {
@@ -303,6 +376,7 @@ class _WorkoutRunnerPageState extends ConsumerState<WorkoutRunnerPage> {
                                 onSaveValue: _showNumpad,
                                 onSaveRpe: _showRpePicker,
                                 onDeleteSet: _deleteSet,
+                                onToggleSetCompletion: _toggleSetCompletion,
                               );
                             },
                           ),

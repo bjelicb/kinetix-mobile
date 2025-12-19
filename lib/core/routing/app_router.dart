@@ -36,12 +36,23 @@ part 'app_router.g.dart';
 /// - User has a workout scheduled for today
 /// - The workout is NOT completed
 /// - User has NOT already checked in today
+/// - User has NOT skipped check-in for today
+///
+/// NOTE: Session-based check-in validation (after login/logout) is handled
+/// in WorkoutValidationService ONLY when accessing workout runner
 Future<bool> _shouldRequireCheckIn(User? user) async {
   // If no user, no check-in required
   if (user == null) return false;
 
   // Only clients need to check in
   if (user.role != 'CLIENT') return false;
+
+  // Check if user has chosen to skip check-in for today
+  final isSkipped = await SharedPreferencesService.isCheckInSkipped();
+  if (isSkipped) {
+    debugPrint('[AppRouter:CheckInValidation] User skipped check-in for today - Check-in NOT required');
+    return false;
+  }
 
   final localDataSource = LocalDataSource();
 
@@ -83,11 +94,31 @@ Future<bool> _shouldRequireCheckIn(User? user) async {
   final todayWorkouts = await localDataSource.getTodayWorkouts();
 
   // No workouts today, no check-in required
-  if (todayWorkouts.isEmpty) return false;
+  if (todayWorkouts.isEmpty) {
+    debugPrint('[AppRouter:CheckInValidation] No workouts today - Check-in NOT required');
+    return false;
+  }
 
-  // Check if any workout is not completed
+  // Log today's workouts for debugging
+  for (final workout in todayWorkouts) {
+    debugPrint(
+      '[AppRouter:CheckInValidation] Today workout: ${workout.name}, isRestDay: ${workout.isRestDay}, isCompleted: ${workout.isCompleted}',
+    );
+  }
+
+  // Filter out rest days - rest days don't require check-in
+  final nonRestDayWorkouts = todayWorkouts.where((workout) => !workout.isRestDay).toList();
+
+  if (nonRestDayWorkouts.isEmpty) {
+    debugPrint('[AppRouter:CheckInValidation] Only rest days today - Check-in NOT required');
+    return false;
+  }
+
+  // Check if any non-rest-day workout is not completed
   // If all workouts are completed, no check-in required
-  final hasIncompleteWorkout = todayWorkouts.any((workout) => !workout.isCompleted);
+  final hasIncompleteWorkout = nonRestDayWorkouts.any((workout) => !workout.isCompleted);
+
+  debugPrint('[AppRouter:CheckInValidation] Has incomplete workout: $hasIncompleteWorkout');
 
   return hasIncompleteWorkout;
 }
