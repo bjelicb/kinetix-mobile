@@ -17,43 +17,58 @@ const WorkoutCollectionSchema = CollectionSchema(
   name: r'WorkoutCollection',
   id: -3773153767250735449,
   properties: {
-    r'isCompleted': PropertySchema(
+    r'dayOfWeek': PropertySchema(
       id: 0,
+      name: r'dayOfWeek',
+      type: IsarType.long,
+    ),
+    r'isCompleted': PropertySchema(
+      id: 1,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
     r'isDirty': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'isDirty',
       type: IsarType.bool,
     ),
     r'isMissed': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'isMissed',
       type: IsarType.bool,
     ),
     r'isRestDay': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'isRestDay',
       type: IsarType.bool,
     ),
+    r'isSyncing': PropertySchema(
+      id: 5,
+      name: r'isSyncing',
+      type: IsarType.bool,
+    ),
     r'name': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'name',
       type: IsarType.string,
     ),
+    r'planId': PropertySchema(
+      id: 7,
+      name: r'planId',
+      type: IsarType.string,
+    ),
     r'scheduledDate': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'scheduledDate',
       type: IsarType.dateTime,
     ),
     r'serverId': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'serverId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -100,6 +115,12 @@ int _workoutCollectionEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.name.length * 3;
+  {
+    final value = object.planId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.serverId.length * 3;
   return bytesCount;
 }
@@ -110,14 +131,17 @@ void _workoutCollectionSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.isCompleted);
-  writer.writeBool(offsets[1], object.isDirty);
-  writer.writeBool(offsets[2], object.isMissed);
-  writer.writeBool(offsets[3], object.isRestDay);
-  writer.writeString(offsets[4], object.name);
-  writer.writeDateTime(offsets[5], object.scheduledDate);
-  writer.writeString(offsets[6], object.serverId);
-  writer.writeDateTime(offsets[7], object.updatedAt);
+  writer.writeLong(offsets[0], object.dayOfWeek);
+  writer.writeBool(offsets[1], object.isCompleted);
+  writer.writeBool(offsets[2], object.isDirty);
+  writer.writeBool(offsets[3], object.isMissed);
+  writer.writeBool(offsets[4], object.isRestDay);
+  writer.writeBool(offsets[5], object.isSyncing);
+  writer.writeString(offsets[6], object.name);
+  writer.writeString(offsets[7], object.planId);
+  writer.writeDateTime(offsets[8], object.scheduledDate);
+  writer.writeString(offsets[9], object.serverId);
+  writer.writeDateTime(offsets[10], object.updatedAt);
 }
 
 WorkoutCollection _workoutCollectionDeserialize(
@@ -127,15 +151,18 @@ WorkoutCollection _workoutCollectionDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = WorkoutCollection();
+  object.dayOfWeek = reader.readLongOrNull(offsets[0]);
   object.id = id;
-  object.isCompleted = reader.readBool(offsets[0]);
-  object.isDirty = reader.readBool(offsets[1]);
-  object.isMissed = reader.readBool(offsets[2]);
-  object.isRestDay = reader.readBool(offsets[3]);
-  object.name = reader.readString(offsets[4]);
-  object.scheduledDate = reader.readDateTime(offsets[5]);
-  object.serverId = reader.readString(offsets[6]);
-  object.updatedAt = reader.readDateTime(offsets[7]);
+  object.isCompleted = reader.readBool(offsets[1]);
+  object.isDirty = reader.readBool(offsets[2]);
+  object.isMissed = reader.readBool(offsets[3]);
+  object.isRestDay = reader.readBool(offsets[4]);
+  object.isSyncing = reader.readBool(offsets[5]);
+  object.name = reader.readString(offsets[6]);
+  object.planId = reader.readStringOrNull(offsets[7]);
+  object.scheduledDate = reader.readDateTime(offsets[8]);
+  object.serverId = reader.readString(offsets[9]);
+  object.updatedAt = reader.readDateTime(offsets[10]);
   return object;
 }
 
@@ -147,7 +174,7 @@ P _workoutCollectionDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 1:
       return (reader.readBool(offset)) as P;
     case 2:
@@ -155,12 +182,18 @@ P _workoutCollectionDeserializeProp<P>(
     case 3:
       return (reader.readBool(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readDateTime(offset)) as P;
+    case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -367,6 +400,80 @@ extension WorkoutCollectionQueryWhere
 extension WorkoutCollectionQueryFilter
     on QueryBuilder<WorkoutCollection, WorkoutCollection, QFilterCondition> {
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      dayOfWeekIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'dayOfWeek',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      dayOfWeekIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'dayOfWeek',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      dayOfWeekEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'dayOfWeek',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      dayOfWeekGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'dayOfWeek',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      dayOfWeekLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'dayOfWeek',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      dayOfWeekBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'dayOfWeek',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
       idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -457,6 +564,16 @@ extension WorkoutCollectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isRestDay',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      isSyncingEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isSyncing',
         value: value,
       ));
     });
@@ -593,6 +710,160 @@ extension WorkoutCollectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'planId',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'planId',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'planId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'planId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'planId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'planId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'planId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'planId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'planId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'planId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'planId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterFilterCondition>
+      planIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'planId',
         value: '',
       ));
     });
@@ -917,6 +1188,20 @@ extension WorkoutCollectionQueryLinks
 extension WorkoutCollectionQuerySortBy
     on QueryBuilder<WorkoutCollection, WorkoutCollection, QSortBy> {
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByDayOfWeek() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dayOfWeek', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByDayOfWeekDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dayOfWeek', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
       sortByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCompleted', Sort.asc);
@@ -973,6 +1258,20 @@ extension WorkoutCollectionQuerySortBy
   }
 
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByIsSyncing() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSyncing', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByIsSyncingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSyncing', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
       sortByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -983,6 +1282,20 @@ extension WorkoutCollectionQuerySortBy
       sortByNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByPlanId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'planId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      sortByPlanIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'planId', Sort.desc);
     });
   }
 
@@ -1031,6 +1344,20 @@ extension WorkoutCollectionQuerySortBy
 
 extension WorkoutCollectionQuerySortThenBy
     on QueryBuilder<WorkoutCollection, WorkoutCollection, QSortThenBy> {
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByDayOfWeek() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dayOfWeek', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByDayOfWeekDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dayOfWeek', Sort.desc);
+    });
+  }
+
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1101,6 +1428,20 @@ extension WorkoutCollectionQuerySortThenBy
   }
 
   QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByIsSyncing() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSyncing', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByIsSyncingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSyncing', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
       thenByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -1111,6 +1452,20 @@ extension WorkoutCollectionQuerySortThenBy
       thenByNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByPlanId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'planId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QAfterSortBy>
+      thenByPlanIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'planId', Sort.desc);
     });
   }
 
@@ -1160,6 +1515,13 @@ extension WorkoutCollectionQuerySortThenBy
 extension WorkoutCollectionQueryWhereDistinct
     on QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct> {
   QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct>
+      distinctByDayOfWeek() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'dayOfWeek');
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct>
       distinctByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isCompleted');
@@ -1187,10 +1549,24 @@ extension WorkoutCollectionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct>
+      distinctByIsSyncing() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isSyncing');
+    });
+  }
+
   QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct> distinctByName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, WorkoutCollection, QDistinct>
+      distinctByPlanId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'planId', caseSensitive: caseSensitive);
     });
   }
 
@@ -1224,6 +1600,12 @@ extension WorkoutCollectionQueryProperty
     });
   }
 
+  QueryBuilder<WorkoutCollection, int?, QQueryOperations> dayOfWeekProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'dayOfWeek');
+    });
+  }
+
   QueryBuilder<WorkoutCollection, bool, QQueryOperations>
       isCompletedProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1249,9 +1631,21 @@ extension WorkoutCollectionQueryProperty
     });
   }
 
+  QueryBuilder<WorkoutCollection, bool, QQueryOperations> isSyncingProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isSyncing');
+    });
+  }
+
   QueryBuilder<WorkoutCollection, String, QQueryOperations> nameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'name');
+    });
+  }
+
+  QueryBuilder<WorkoutCollection, String?, QQueryOperations> planIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'planId');
     });
   }
 

@@ -49,6 +49,7 @@ class ApiConstants {
   static const String workoutsToday = '/workouts/today';
   static const String workoutsWeek = '/workouts/week';
   static const String workoutsHistory = '/workouts/history';
+  static const String workoutsAllLogs = '/clients/workouts/all'; // All workout logs (completed, pending, missed)
   static const String workoutsLog = '/workouts/log';
   
   // Client Endpoints

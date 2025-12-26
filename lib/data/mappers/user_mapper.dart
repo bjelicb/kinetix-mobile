@@ -11,6 +11,7 @@ class UserMapper {
       trainerName: collection.trainerName,
       trainerId: collection.trainerId,
       clientProfileId: collection.clientProfileId,
+      currentPlanId: collection.currentPlanId,
       lastSync: collection.lastSync,
       isActive: collection.isActive ?? true,
     );
@@ -24,6 +25,7 @@ class UserMapper {
       ..name = entity.name
       ..trainerName = entity.trainerName
       ..trainerId = entity.trainerId
+      ..currentPlanId = entity.currentPlanId
       ..isActive = entity.isActive
       ..lastSync = entity.lastSync;
     

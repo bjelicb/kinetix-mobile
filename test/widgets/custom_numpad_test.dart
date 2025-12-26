@@ -8,9 +8,14 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: CustomNumpad(
-              onValueChanged: (value) {},
-              onConfirm: () {},
+            body: SingleChildScrollView(
+              child: MediaQuery(
+                data: const MediaQueryData(size: Size(800, 1200)), // Dovoljno visine za quick-select buttons
+                child: CustomNumpad(
+                  onValueChanged: (value) {},
+                  onConfirm: () {},
+                ),
+              ),
             ),
           ),
         ),

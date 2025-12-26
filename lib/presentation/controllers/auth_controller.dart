@@ -28,12 +28,12 @@ class AuthController extends _$AuthController {
     _repository = AuthRepositoryImpl(_localDataSource, _remoteDataSource, storage);
 
     final user = await _repository.getCurrentUser();
-    
+
     // Auto-sync on app startup if user is logged in (mobile only)
     if (user != null && !kIsWeb) {
       _triggerInitialSync();
     }
-    
+
     return user;
   }
 
@@ -41,26 +41,51 @@ class AuthController extends _$AuthController {
     state = const AsyncValue.loading();
     try {
       final user = await _repository.login(email, password);
-      state = AsyncValue.data(user);
-      
+
+      // Fetch full profile for CLIENT users to get currentPlanId
+      User finalUser = user;
+      if (user.role == 'CLIENT') {
+        try {
+          final profileData = await _remoteDataSource.getClientProfile(user.id);
+          final currentPlanId = profileData['currentPlanId']?.toString();
+
+          // Merge currentPlanId into user
+          finalUser = user.copyWith(currentPlanId: currentPlanId);
+
+          // Save updated user locally
+          final userCollection = await _localDataSource.getUserByServerId(user.id);
+          if (userCollection != null) {
+            userCollection.currentPlanId = currentPlanId;
+            await _localDataSource.saveUser(userCollection);
+          }
+
+          debugPrint('[AuthController] ✓ Fetched currentPlanId: $currentPlanId');
+        } catch (e) {
+          debugPrint('[AuthController] ⚠️ Failed to fetch profile: $e');
+          // Continue with user without currentPlanId
+        }
+      }
+
+      state = AsyncValue.data(finalUser);
+
       // Clear check-in session for new login
       debugPrint('[AuthController] ═══════════════════════════════════════');
       debugPrint('[AuthController] Login successful - clearing check-in session');
       await SharedPreferencesService.clearCheckInSession();
       debugPrint('[AuthController] ═══════════════════════════════════════');
-      
+
       // Trigger initial sync after login (mobile only)
       if (!kIsWeb) {
         _triggerInitialSync();
       }
-      
-      return user;
+
+      return finalUser;
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
       rethrow;
     }
   }
-  
+
   /// Trigger initial sync in background (don't await)
   void _triggerInitialSync() {
     Future(() async {
@@ -95,7 +120,7 @@ class AuthController extends _$AuthController {
       debugPrint('[AuthController] Logout - clearing check-in session');
       await SharedPreferencesService.clearCheckInSession();
       debugPrint('[AuthController] ═══════════════════════════════════════');
-      
+
       await _repository.logout();
       state = const AsyncValue.data(null);
     } catch (e, stack) {

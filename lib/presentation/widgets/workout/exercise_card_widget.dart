@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/gradients.dart';
-import '../../../core/utils/haptic_feedback.dart';
 import '../../../domain/entities/exercise.dart';
 import '../../../domain/entities/workout.dart';
 import '../gradient_card.dart';
@@ -13,11 +12,15 @@ class ExerciseCard extends StatelessWidget {
   final Workout workout;
   final GlobalKey exerciseKey;
   final bool isExerciseCompleted;
+  final bool isLoading;
   final Function(int, Workout) onToggleCompletion;
   final Function(String, int, int, String, Workout) onSaveValue;
+  final Function(int, int, double, Workout)? onWeightSelected; // NOVO - optional callback za weight picker
+  final Function(int, int, int, Workout)? onRepsSelected; // NOVO - optional callback za reps picker
   final Function(int, int, double?, Workout) onSaveRpe;
   final Function(int, int, Workout, Key) onDeleteSet;
   final Function(int, int, Workout) onToggleSetCompletion;
+  final Function(int, int)? isLoadingSet; // Returns true if set is loading
 
   const ExerciseCard({
     super.key,
@@ -26,11 +29,15 @@ class ExerciseCard extends StatelessWidget {
     required this.workout,
     required this.exerciseKey,
     required this.isExerciseCompleted,
+    this.isLoading = false,
     required this.onToggleCompletion,
     required this.onSaveValue,
+    this.onWeightSelected, // NOVO - optional
+    this.onRepsSelected, // NOVO - optional
     required this.onSaveRpe,
     required this.onDeleteSet,
     required this.onToggleSetCompletion,
+    this.isLoadingSet, // NOVO - optional callback to check if set is loading
   });
 
   @override
@@ -48,7 +55,11 @@ class ExerciseCard extends StatelessWidget {
             children: [
               // Exercise Checkbox (PREČICA - toggles ALL sets)
               GestureDetector(
-                onTap: () => onToggleCompletion(exerciseIndex, workout),
+                onTap: () {
+                  if (!isLoading) {
+                    onToggleCompletion(exerciseIndex, workout);
+                  }
+                },
                 child: Container(
                   width: 32,
                   height: 32,
@@ -65,13 +76,28 @@ class ExerciseCard extends StatelessWidget {
                       width: 2,
                     ),
                   ),
-                  child: isExerciseCompleted
-                      ? const Icon(
-                          Icons.check_rounded,
-                          color: AppColors.textPrimary,
-                          size: 20,
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+                              ),
+                            ),
+                          ),
                         )
-                      : null,
+                      : (isExerciseCompleted
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: AppColors.textPrimary,
+                              size: 20,
+                            )
+                          : null),
                 ),
               ),
               const SizedBox(width: 12),
@@ -110,29 +136,23 @@ class ExerciseCard extends StatelessWidget {
               setIndex: setIndex,
               workout: workout,
               setKey: setKey,
+              isLoading: isLoadingSet != null ? isLoadingSet!(exerciseIndex, setIndex) : false,
               onSaveValue: onSaveValue,
+              onWeightSelected: onWeightSelected != null
+                  ? (exerciseIndex, setIndex, weight, workout) {
+                      onWeightSelected!(exerciseIndex, setIndex, weight, workout);
+                    }
+                  : null,
+              onRepsSelected: onRepsSelected != null
+                  ? (exerciseIndex, setIndex, reps, workout) {
+                      onRepsSelected!(exerciseIndex, setIndex, reps, workout);
+                    }
+                  : null,
               onSaveRpe: onSaveRpe,
               onDeleteSet: onDeleteSet,
               onToggleSetCompletion: onToggleSetCompletion,
             );
           }),
-          
-          // Add Set Button
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () {
-              // TODO: Add new set
-              AppHaptic.selection();
-            },
-            icon: const Icon(
-              Icons.add_rounded,
-              color: AppColors.primary,
-            ),
-            label: const Text(
-              'Add Set',
-              style: TextStyle(color: AppColors.primary),
-            ),
-          ),
         ],
       ),
     );

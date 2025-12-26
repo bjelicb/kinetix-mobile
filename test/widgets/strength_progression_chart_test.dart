@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kinetix_mobile/presentation/widgets/strength_progression_chart.dart';
 
 void main() {
@@ -13,9 +14,11 @@ void main() {
       };
       
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StrengthProgressionChart(exerciseData: exerciseData),
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: StrengthProgressionChart(exerciseData: exerciseData),
+            ),
           ),
         ),
       );
@@ -25,11 +28,13 @@ void main() {
     
     testWidgets('shows loading indicator when isLoading is true', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: StrengthProgressionChart(
-              exerciseData: {},
-              isLoading: true,
+        ProviderScope(
+          child: const MaterialApp(
+            home: Scaffold(
+              body: StrengthProgressionChart(
+                exerciseData: {},
+                isLoading: true,
+              ),
             ),
           ),
         ),
@@ -40,9 +45,11 @@ void main() {
     
     testWidgets('shows empty state when data is empty', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: StrengthProgressionChart(exerciseData: {}),
+        ProviderScope(
+          child: const MaterialApp(
+            home: Scaffold(
+              body: StrengthProgressionChart(exerciseData: {}),
+            ),
           ),
         ),
       );

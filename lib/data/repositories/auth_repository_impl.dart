@@ -50,6 +50,7 @@ class AuthRepositoryImpl implements AuthRepository {
             email: userEmail,
             role: userRole,
             name: userName.isNotEmpty ? userName : userEmail,
+            currentPlanId: null,
             lastSync: DateTime.now(),
           );
         }
@@ -61,6 +62,7 @@ class AuthRepositoryImpl implements AuthRepository {
           email: userEmail,
           role: userRole,
           name: userName.isNotEmpty ? userName : userEmail,
+          currentPlanId: null,
           lastSync: DateTime.now(),
         );
       }
@@ -132,16 +134,19 @@ class AuthRepositoryImpl implements AuthRepository {
           ..lastSync = DateTime.now();
         
         await _localDataSource.saveUser(userCollection);
-        return UserMapper.toEntity(userCollection);
+        final userEntity = UserMapper.toEntity(userCollection);
+        return userEntity;
       } catch (isarError) {
         // Even if local save fails, return user from API response
-        return User(
+        final userEntity = User(
           id: userData['_id'] as String? ?? userData['id'] as String,
           email: userData['email'] as String,
           role: userData['role'] as String,
           name: userName,
+          currentPlanId: null,
           lastSync: DateTime.now(),
         );
+        return userEntity;
       }
     } catch (e) {
       // If API fails, try to get from local cache

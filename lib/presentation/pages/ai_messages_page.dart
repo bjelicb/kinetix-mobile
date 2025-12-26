@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/ai_message.dart';
 import '../../data/datasources/remote_data_source.dart';
-import '../../data/datasources/local_data_source.dart';
 import '../widgets/gradient_background.dart';
 import '../widgets/ai_message_card.dart';
 import '../widgets/shimmer_loader.dart';
 import '../controllers/common_providers.dart';
+import '../controllers/auth_controller.dart';
 
 class AIMessagesPage extends ConsumerStatefulWidget {
   const AIMessagesPage({super.key});
@@ -32,18 +32,18 @@ class _AIMessagesPageState extends ConsumerState<AIMessagesPage> {
     debugPrint('[AIMessages:Fetch] Loading messages for client');
     
     try {
-      // Get current user ID from auth controller
-      final localDataSource = LocalDataSource();
-      final users = await localDataSource.getUsers();
+      // Get current user from auth controller (works on both mobile and web)
+      final user = ref.read(authControllerProvider).valueOrNull;
       
-      if (users.isEmpty) {
-        debugPrint('[AIMessages:Fetch] No users found');
+      if (user == null) {
+        debugPrint('[AIMessages:Fetch] ⚠ No user found in auth controller');
         _messages = [];
         return;
       }
       
-      final userId = users.first.serverId;
-      debugPrint('[AIMessages:Fetch] User ID: $userId');
+      final userId = user.id;
+      debugPrint('[AIMessages:Fetch] User ID from auth controller: $userId');
+      debugPrint('[AIMessages:Fetch] User role: ${user.role}');
       
       // Load messages from API
       final remoteDataSource = RemoteDataSource(
@@ -51,16 +51,22 @@ class _AIMessagesPageState extends ConsumerState<AIMessagesPage> {
         ref.read(secureStorageProvider),
       );
       
-      final messagesData = await remoteDataSource.getAIMessages(userId);
+      // Get clientProfileId (not userId!)
+      debugPrint('[AIMessages:Fetch] Fetching client profile to get clientProfileId...');
+      final clientProfile = await remoteDataSource.getClientProfile(userId);
+      final clientProfileId = clientProfile['_id'] as String;
+      debugPrint('[AIMessages:Fetch] Client Profile ID: $clientProfileId');
+      
+      final messagesData = await remoteDataSource.getAIMessages(clientProfileId);
       _messages = messagesData.map((data) => AIMessage.fromJson(data)).toList();
       
       // Sort by created date (newest first)
       _messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       
-      debugPrint('[AIMessages:Display] Loaded ${_messages.length} messages');
+      debugPrint('[AIMessages:Display] ✓ Loaded ${_messages.length} messages');
       
     } catch (e) {
-      debugPrint('[AIMessages:Fetch] Error loading messages: $e');
+      debugPrint('[AIMessages:Fetch] ✗ Error loading messages: $e');
       _messages = [];
     } finally {
       if (mounted) {

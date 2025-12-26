@@ -35,6 +35,14 @@ class DashboardDataService {
       };
 
       debugPrint('[DashboardDataService] loadBalance SUCCESS - Balance: $balance€, Monthly: $monthlyBalance€');
+      
+      // Log paywall condition for debugging
+      if (monthlyBalance >= 0) {
+        debugPrint('[DashboardDataService] Paywall will NOT be shown - monthlyBalance is not negative ($monthlyBalance€)');
+      } else {
+        debugPrint('[DashboardDataService] Paywall condition MET - monthlyBalance is negative ($monthlyBalance€), paywall should be shown');
+      }
+      
       return balanceData;
     } catch (e, stackTrace) {
       debugPrint('[DashboardDataService] loadBalance ERROR: $e');

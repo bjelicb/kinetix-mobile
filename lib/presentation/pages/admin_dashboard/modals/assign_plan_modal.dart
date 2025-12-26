@@ -127,13 +127,21 @@ Future<void> showAssignPlanModal({
                     return client.name.toLowerCase().contains(query) || client.email.toLowerCase().contains(query);
                   }).toList();
 
+            final screenHeight = MediaQuery.of(context).size.height;
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isSmallScreen = screenHeight < 600 || screenWidth < 400;
+            
             return Container(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+              constraints: BoxConstraints(
+                maxHeight: screenHeight * 0.85,
+                minHeight: isSmallScreen ? screenHeight * 0.5 : 400,
+              ),
+              padding: EdgeInsets.all(isSmallScreen ? AppSpacing.md : AppSpacing.lg),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   Text('Assign Plan to Clients', style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: AppSpacing.lg),
                   Text('Start Date *', style: Theme.of(context).textTheme.titleMedium),
@@ -226,7 +234,11 @@ Future<void> showAssignPlanModal({
                     },
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Flexible(
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: screenHeight * 0.4,
+                      minHeight: 100,
+                    ),
                     child: filteredClients.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -238,6 +250,7 @@ Future<void> showAssignPlanModal({
                           )
                         : ListView.builder(
                             shrinkWrap: true,
+                            physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: filteredClients.length,
                             itemBuilder: (context, index) {
                               final client = filteredClients[index];
@@ -305,6 +318,8 @@ Future<void> showAssignPlanModal({
                                                           ? AppColors.textSecondary
                                                           : AppColors.textPrimary,
                                                     ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
                                                   ),
                                                 ),
                                                 if (isAlreadyAssigned)
@@ -333,6 +348,8 @@ Future<void> showAssignPlanModal({
                                                     ? AppColors.textSecondary.withValues(alpha: 0.7)
                                                     : AppColors.textSecondary,
                                               ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ],
                                         ),
@@ -344,7 +361,7 @@ Future<void> showAssignPlanModal({
                             },
                           ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(height: isSmallScreen ? AppSpacing.sm : AppSpacing.md),
                   NeonButton(
                     text: 'Assign Plan',
                     icon: Icons.link_rounded,
@@ -547,7 +564,8 @@ Future<void> showAssignPlanModal({
                             }
                           },
                   ),
-                ],
+                  ],
+                ),
               ),
             );
           },

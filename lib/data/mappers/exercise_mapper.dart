@@ -8,13 +8,15 @@ class ExerciseMapper {
     List<domain.WorkoutSet> sets;
     if (collection.sets.isNotEmpty) {
       // Use existing completed sets
-      sets = collection.sets.map((set) => domain.WorkoutSet(
-        id: set.id,
-        weight: set.weight,
-        reps: set.reps,
-        rpe: set.rpe,
-        isCompleted: set.isCompleted,
-      )).toList();
+      sets = collection.sets.map((set) {
+        return domain.WorkoutSet(
+          id: set.id,
+          weight: set.weight,
+          reps: set.reps,
+          rpe: set.rpe,
+          isCompleted: set.isCompleted,
+        );
+      }).toList();
     } else if (collection.planSets != null && collection.planSets! > 0) {
       // Initialize empty sets based on planSets
       // Parse planReps to get default reps value

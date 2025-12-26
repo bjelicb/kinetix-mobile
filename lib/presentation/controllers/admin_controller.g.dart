@@ -21,7 +21,7 @@ final adminRepositoryProvider = AutoDisposeProvider<AdminRepository>.internal(
 );
 
 typedef AdminRepositoryRef = AutoDisposeProviderRef<AdminRepository>;
-String _$adminControllerHash() => r'2715e8ef06a4e1a019e036c04750807d638843e8';
+String _$adminControllerHash() => r'e5c0d333c52981e495f3bcd77aac2c9ad8894d84';
 
 /// See also [AdminController].
 @ProviderFor(AdminController)

@@ -4,7 +4,7 @@
 **Prioritet:** 🟡 **VISOKI**  
 **Status:** ✅ **KOMPLETIRANO** - 100% Implementirano  
 **Timeline:** 2-3 dana  
-**Datum Završetka:** Decembar 2024
+**Datum Završetka:** Decembar 2024 (AI Messages Management dodat Decembar 2025)
 
 > **FOKUS:** Poboljšanja sync mehanizma i admin dashboard funkcionalnosti.
 
@@ -142,6 +142,42 @@
 - `lib/data/datasources/remote_data_source.dart` - **IZMENA** ✅ **IMPLEMENTIRANO** (dodati analytics metode: getAdminStats, getWorkoutStats, getAllUsers, getAllWorkouts)
 
 **Status:** Analytics dashboard kompletno implementiran sa svim metrikama. Integrisano sa backend API endpoint-ima za admin statistike.
+
+---
+
+### **2.4.2 Admin Dashboard - AI Messages Management** 🟡 ✅ **KOMPLETIRANO** (Dec 20, 2025)
+
+**Zadatak:**
+Kompletan AI Messages Management sistem za kreiranje i upravljanje AI porukama za klijente.
+
+**Zahtevi:**
+- [x] AIMessagesManagementCard widget ✅
+- [x] Create Message modal sa Quick Templates i Custom Message tab-ovima ✅
+- [x] Quick Templates tab sa 4 kategorije (MISSED_WORKOUTS, STREAK, WEIGHT_SPIKE, SICK_DAY) ✅
+- [x] Custom Message tab sa tone selection ✅
+- [x] Template selection sa metadata input poljima ✅
+- [x] Search bar za pretragu poruka ✅
+- [x] Filter chips po tone-u (All, Motivational, Warning, Aggressive, Empathetic) ✅
+- [x] Lista svih poruka sa sortiranjem (najnovije prvo) ✅
+- [x] Batch endpoint (`GET /gamification/messages/all`) - nema 429 grešaka ✅
+- [x] Auto-refresh liste nakon kreiranja poruke ✅
+- [x] ClientProfileId koristi se umesto userId (FIXED) ✅
+
+**Fajlovi:**
+- `lib/presentation/pages/admin_dashboard/widgets/ai_messages_management_card.dart` - **NOVO** ✅ **KREIRANO**
+- `lib/presentation/pages/admin_dashboard/modals/create_ai_message_modal.dart` - **NOVO** ✅ **KREIRANO**
+- `lib/presentation/pages/admin_dashboard/widgets/ai_message_list_item.dart` - **NOVO** ✅ **KREIRANO**
+- `lib/presentation/controllers/admin_controller.dart` - **IZMENA** ✅ (dodati generateAIMessage, getAllAIMessages metode)
+- `lib/data/datasources/remote_data_source.dart` - **IZMENA** ✅ (dodati generateAIMessage, getAllAIMessages metode)
+- `lib/presentation/pages/admin_dashboard/modals/create_ai_message_modal.dart` - **IZMENA** ✅ (fixed clientProfileId umesto userId)
+
+**Backend API Endpoints:**
+- `POST /gamification/generate-message` - Kreiranje AI poruke
+- `GET /gamification/messages/all` - Dobavljanje svih poruka (Admin only, batch endpoint)
+- `GET /gamification/messages/:clientId` - Dobavljanje poruka za klijenta
+- `PATCH /gamification/messages/:messageId/read` - Označavanje poruke kao pročitane
+
+**Status:** AI Messages Management kompletno implementiran sa Quick Templates, Custom Messages, search, filter i batch endpoint-om. Integrisano sa backend API-jem. FIX: Admin Dashboard koristi clientProfileId umesto userId kada kreira poruke.
 
 ---
 
@@ -1077,6 +1113,38 @@ Row(
 
 ---
 
+### **2.5.1 Workout Runner Loading Animations** 🟡 ✅ **KOMPLETIRANO** (Dec 26, 2025)
+
+**Zadatak:**
+Dodati loading animations za exercise i set checkboxes u workout runner-u za bolji UX feedback dok se čeka da se postave default vrednosti i ažurira state.
+
+**Zahtevi:**
+- [x] Loading state tracking za exercise checkbox (`_loadingExercises` Set<int>) ✅
+- [x] Loading state tracking za set checkbox (`_loadingSets` Set<String>) ✅
+- [x] `isLoading` parametar u `ExerciseCard` widget ✅
+- [x] `isLoading` parametar u `SetRow` widget ✅
+- [x] `isLoadingSet` callback u `ExerciseCard` widget ✅
+- [x] CircularProgressIndicator animacija za exercise checkbox ✅
+- [x] CircularProgressIndicator animacija za set checkbox ✅
+- [x] 300ms delay za smooth animation transition ✅
+- [x] Optimistic UI update sa loading feedback ✅
+- [x] Disable checkbox interaction dok je u loading stanju ✅
+
+**Status:** Loading animations kompletno implementirane sa smooth transitions i optimistic UI updates. Korisnik sada vidi vizuelni feedback odmah nakon klika na checkbox umesto da čeka bez indikacije.
+
+**Fajlovi:**
+- `lib/presentation/pages/workout_runner_page.dart` - **IZMENA** ✅ (dodati `_loadingExercises`, `_loadingSets`, loading state management)
+- `lib/presentation/widgets/workout/exercise_card_widget.dart` - **IZMENA** ✅ (dodati `isLoading` parametar i `CircularProgressIndicator`)
+- `lib/presentation/widgets/workout/set_row_widget.dart` - **IZMENA** ✅ (dodati `isLoading` parametar i `CircularProgressIndicator`)
+
+**Implementacija:**
+- Loading state se postavlja odmah nakon klika na checkbox
+- `CircularProgressIndicator` se prikazuje umesto checkbox-a dok se čeka
+- Loading state se uklanja nakon 300ms kada se state ažurira
+- Smooth transition između loading i completed stanja
+
+---
+
 ### **2.6 Fast Completion Validation** 🟡 ✅ **KOMPLETIRANO**
 
 **Zadatak:**
@@ -1634,7 +1702,7 @@ Future<bool> _shouldRequireCheckIn(User? user) async {
 
 ---
 
-### **2.12 AI Message UI & Handling** 🔴 **KRITIČNO** ✅ **KOMPLETIRANO**
+### **2.12 AI Message UI & Handling** 🔴 **KRITIČNO** ✅ **KOMPLETIRANO** (Dec 20, 2025)
 
 **Zadatak:**
 Prikazati AI-generisane poruke u aplikaciji
@@ -1652,15 +1720,19 @@ Prikazati AI-generisane poruke u aplikaciji
 - [x] Mark as read functionality ✅
 - [x] Integration sa remote API (`/gamification/messages/:clientId`) ✅
 - [x] Badge indicator za unread messages ✅
+- [x] Preview card refresh kada se korisnik vrati sa `/ai-messages` stranice ✅
+- [x] ClientProfileId koristi se umesto userId (FIXED) ✅
+- [x] getClientProfile metoda za dohvatanje clientProfileId ✅
 
-**Status:** AI Message UI kompletno implementiran sa tone-based styling, API integracijom i mark as read funkcionalnošću.
+**Status:** AI Message UI kompletno implementiran i testiran sa tone-based styling, API integracijom, mark as read funkcionalnošću i refresh logikom. FIX: Client dashboard koristi clientProfileId umesto userId za dohvatanje poruka.
 
 **Fajlovi:**
-- `lib/presentation/pages/ai_messages_page.dart` - **NOVO**
-- `lib/presentation/widgets/ai_message_card.dart` - **NOVO**
-- `lib/data/datasources/remote_data_source.dart` - **IZMENA** (dodati getAIMessages, markMessageAsRead)
-- `lib/presentation/pages/dashboard_page.dart` - **IZMENA**
-- `lib/presentation/controllers/ai_message_controller.dart` - **NOVO**
+- `lib/presentation/pages/ai_messages_page.dart` - **NOVO** ✅ **KREIRANO**
+- `lib/presentation/widgets/ai_message_card.dart` - **NOVO** ✅ **KREIRANO**
+- `lib/presentation/widgets/ai_messages_preview_card.dart` - **NOVO** ✅ **KREIRANO**
+- `lib/data/datasources/remote_data_source.dart` - **IZMENA** ✅ (dodati getAIMessages, markMessageAsRead, getClientProfile)
+- `lib/presentation/pages/dashboard_page.dart` - **IZMENA** ✅ (dodati AIMessagesPreviewCard)
+- `lib/presentation/widgets/ai_messages_preview_card.dart` - **IZMENA** ✅ (dodati refresh logiku nakon povratka sa /ai-messages)
 
 **Implementacija:**
 
@@ -2026,6 +2098,137 @@ void _checkMonthlyPaywall() async {
 
 ---
 
+### **2.20 Flow Improvements & Integration Testing Fixes** 🟡 ✅ **KOMPLETIRANO**
+
+**Zadatak:**
+Poboljšanja workflow-ova i flow-ova otkrivena tokom integration testiranja i developmenta
+
+**Zahtevi:**
+- [x] Empty States widget implementiran i integrisan na sve stranice ✅
+- [x] Skeleton Loaders (ShimmerLoader) implementiran za loading states ✅
+- [x] Error Handler sa SnackBar/Dialog implementiran za bolje error handling ✅
+- [x] Sync Status Indicator widget implementiran za real-time sync status ✅
+- [x] Workout Runner loading animations za checkbox toggle ✅
+- [x] Offline queue improvements za check-in flow ✅
+- [x] Export Service implementiran za CSV/JSON export (Settings page) ✅
+- [x] Image Cache Manager implementiran za efficient image caching ✅
+- [x] CachedImageWidget implementiran za cached image display ✅
+- [x] SharedPreferencesService proširen za check-in session management ✅
+- [x] Haptic Feedback utility (AppHaptic) korišćen kroz aplikaciju ✅
+
+**Status:** Flow improvements kompletno implementirani tokom V2 developmenta kroz integration testing i real-world usage.
+
+**Fajlovi:**
+- `lib/presentation/widgets/empty_state.dart` - **NOVO** ✅
+- `lib/presentation/widgets/shimmer_loader.dart` - **NOVO** ✅
+- `lib/core/utils/error_handler.dart` - **IZMENA** ✅
+- `lib/presentation/widgets/sync_status_indicator.dart` - **IZMENA** ✅
+- `lib/core/utils/export_service.dart` - **NOVO** ✅ (CSV/JSON export functionality)
+- `lib/core/utils/image_cache_manager.dart` - **NOVO** ✅ (Image caching sa flutter_cache_manager)
+- `lib/presentation/widgets/cached_image_widget.dart` - **NOVO** ✅ (Widget za cached images)
+- `lib/core/utils/shared_preferences_service.dart` - **IZMENA** ✅ (Proširen za check-in session management)
+- `lib/core/utils/haptic_feedback.dart` - **POSTOJI** ✅ (Haptic feedback utility - korišćen kroz app)
+- Integration na sve relevantne stranice (Dashboard, Workout Runner, Calendar, Plan Details, AI Messages, Check-in History, Workout History, Settings, itd.)
+
+---
+
+### **2.22 Controllers & State Management** 🟡 ✅ **KOMPLETIRANO**
+
+**Zadatak:**
+Riverpod controlleri i state management implementirani tokom developmenta.
+
+**Zahtevi:**
+- [x] **ThemeController** - Riverpod controller za theme management (TrainerTheme enum) ✅
+- [x] **BootstrapController** - Riverpod controller za app initialization ✅
+
+**Fajlovi:**
+- `lib/presentation/controllers/theme_controller.dart` - **POSTOJI** ✅
+- `lib/presentation/controllers/bootstrap_controller.dart` - **POSTOJI** ✅
+
+**Implementacija:**
+
+```dart
+// theme_controller.dart
+enum TrainerTheme { milan, aca, neutral }
+
+@riverpod
+class ThemeController extends _$ThemeController {
+  @override
+  TrainerTheme build() {
+    final user = ref.watch(authControllerProvider).valueOrNull;
+    return _determineTheme(user);
+  }
+  
+  TrainerTheme _determineTheme(User? user) {
+    // Trainers see their own theme
+    // Clients see their assigned trainer's theme
+    // Default: neutral
+  }
+}
+
+// bootstrap_controller.dart
+@riverpod
+FutureOr<bool> bootstrapController(BootstrapControllerRef ref) async {
+  await BootstrapService.initialize();
+  return true;
+}
+```
+
+**Status:** Controllers kompletno implementirani. ThemeController omogućava trainer-specific themes, BootstrapController inicijalizuje app pri pokretanju.
+
+**Testovi:**
+- [x] ThemeController theme determination logic
+- [x] BootstrapController initialization
+
+---
+
+### **2.21 Utility Services & Widgets** 🟡 ✅ **KOMPLETIRANO**
+
+**Zadatak:**
+Različiti utility servisi i widget-i implementirani tokom developmenta koji pružaju osnovne funkcionalnosti za različite delove aplikacije.
+
+**Zahtevi:**
+
+#### **Services:**
+- [x] **BootstrapService** - Inicijalizacija Isar i BackgroundSyncService pri pokretanju aplikacije ✅
+- [x] **ExerciseLibraryService** - Učitavanje exercises.json, caching, search, filter po kategoriji/opremi ✅
+- [x] **WorkoutTimerService** - Timer sa start/pause/resume funkcionalnostima, formatTime helper ✅
+- [x] **AnalyticsService** - Calculate weekly/overall adherence, strength progression calculations ✅
+- [x] **LoaderAnimationManager** - Global animation manager za loader animation (continuous animation state) ✅
+- [x] **ProfileStatsService** - Calculate completed workouts, total volume, streak, volume progression, PRs, best exercises ✅
+- [x] **SettingsService** - Load/save settings from SharedPreferences (workout reminders, check-in reminders, push notifications, auto sync) ✅
+- [x] **PlanPreviewService** - Service za prikaz plan preview dialog-a ✅
+- [x] **WorkoutTemplateEditService** - Convert template exercises to Exercise entities, apply template ✅
+- [x] **WorkoutTemplateService** - Load workout templates from JSON, getTemplateById, searchTemplates ✅
+- [x] **AnalyticsPageService** - Load client analytics data wrapper ✅
+- [x] **SettingsExportService** - Export to CSV/JSON wrapper oko ExportService ✅
+
+#### **Widgets:**
+- [x] **PRTracker** - Personal Records tracker widget sa listom PR-a po exercise-u ✅
+- [x] **ProgressChart** - Line chart widget za prikaz volume progression (fl_chart) ✅
+- [x] **StrengthProgressionChart** - Strength progression chart sa exercise selection dropdown (fl_chart) ✅
+
+**Fajlovi:**
+- `lib/services/bootstrap.dart` - **POSTOJI** ✅
+- `lib/services/exercise_library_service.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/workout/services/workout_timer_service.dart` - **POSTOJI** ✅
+- `lib/data/services/analytics_service.dart` - **POSTOJI** ✅
+- `lib/presentation/widgets/loader_animation_manager.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/profile/services/profile_stats_service.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/settings/services/settings_service.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/admin_dashboard/services/plan_preview_service.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/workout_edit/services/workout_template_service.dart` - **POSTOJI** ✅
+- `lib/services/workout_template_service.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/analytics/services/analytics_page_service.dart` - **POSTOJI** ✅
+- `lib/presentation/pages/settings/services/settings_export_service.dart` - **POSTOJI** ✅
+- `lib/presentation/widgets/pr_tracker.dart` - **POSTOJI** ✅
+- `lib/presentation/widgets/progress_chart.dart` - **POSTOJI** ✅
+- `lib/presentation/widgets/strength_progression_chart.dart` - **POSTOJI** ✅
+
+**Status:** Utility services i widget-i kompletno implementirani tokom V2 developmenta. Omogućavaju osnovne funkcionalnosti poput exercise library loading, workout timing, analytics calculations, profile statistics, settings management, i chart visualizacije.
+
+---
+
 ## ✅ **CHECKLIST:**
 
 **Organizacija (Agent može raditi u bilo kom redosledu, ali preporučeno redosled iznad):**
@@ -2046,12 +2249,13 @@ void _checkMonthlyPaywall() async {
 - [ ] **2.11 Check-in Mandatory Enforcement Edge Cases**
 
 ### **AI Messages:**
-- [ ] **2.12 AI Message UI & Handling** 🔴 **KRITIČNO**
-  - [ ] AIMessageCard widget
-  - [ ] AI Messages page
-  - [ ] Dashboard integracija
-  - [ ] Tone-based styling
-  - [ ] Mark as read functionality
+- [x] **2.12 AI Message UI & Handling** 🔴 **KRITIČNO** ✅ **KOMPLETIRANO**
+  - [x] AIMessageCard widget ✅
+  - [x] AI Messages page ✅
+  - [x] Dashboard integracija (preview card) ✅
+  - [x] Tone-based styling ✅
+  - [x] Mark as read functionality ✅
+  - [x] Preview card refresh logika ✅
 
 ### **Calendar & Plan Management:**
 - [ ] **2.13 Calendar Integration** 🟡 **VISOKI**
@@ -2063,9 +2267,10 @@ void _checkMonthlyPaywall() async {
 - [ ] Error handling poboljšan
 
 ### **Admin Dashboard:**
-- [ ] Check-ins Management widget kreiran
-- [ ] Analytics widget kreiran
-- [ ] **Plan Builder/Editor implementiran** 🔴 **KRITIČNO**
+- [x] Check-ins Management widget kreiran ✅
+- [x] Analytics widget kreiran ✅
+- [x] **AI Messages Management widget kreiran** ✅ (Dec 20, 2025)
+- [x] **Plan Builder/Editor implementiran** 🔴 **KRITIČNO** ✅
   - [ ] Plan Builder page kreirana
   - [ ] Workout Day Editor widget
   - [ ] Exercise Editor widget
@@ -2090,31 +2295,59 @@ void _checkMonthlyPaywall() async {
 ## 🎉 **IMPLEMENTACIJA ZAVRŠENA:**
 
 ### **Statistika:**
-- ✅ **16 zadataka** - Svi kompletirani (uključujući novu check-in cloud integration)
+- ✅ **21 zadataka** - Svi kompletirani (uključujući novu check-in cloud integration, AI Messages Management, Workout Runner Loading Animations, Flow Improvements, Utility Services & Widgets i Controllers)
 - ✅ **Backend API integracija** - 100% kompletirana
 - ✅ **Code Quality** - Perfektan (0 ERROR, 0 WARNING, 0 INFO)
 - ✅ **Flutter Analyze** - "No issues found!"
 - ✅ **Check-in System** - Kompletno sa cloud storage i GPS validation
+- ✅ **AI Messages System** - Kompletno sa Admin Management i Client UI
 
 ### **Kreirani Fajlovi:**
 - ✅ Plan Builder kompletan sa svim widget-ima
-- ✅ Admin Dashboard komponente (Analytics, Check-ins Management)
-- ✅ AI Messages UI sa tone-based styling
+- ✅ Admin Dashboard komponente (Analytics, Check-ins Management, AI Messages Management)
+- ✅ AI Messages UI sa tone-based styling (Admin i Client strana)
 - ✅ Calendar integration sa event markerima
 - ✅ Check-in queue service za offline funkcionalnost
 - ✅ DateUtils za timezone handling
+- ✅ **EmptyState widget** - Multi-page empty state support 🆕
+- ✅ **ShimmerLoader widget** - Skeleton loaders sa shimmer effect 🆕
+- ✅ **ErrorHandler utility** - Centralized error handling sa SnackBar/Dialog 🆕
+- ✅ **SyncStatusIndicator widget** - Real-time sync status display 🆕
+- ✅ **ExportService utility** - CSV/JSON export functionality za workouts i check-ins 🆕
+- ✅ **ImageCacheManager utility** - Efficient image caching sa flutter_cache_manager 🆕
+- ✅ **CachedImageWidget** - Widget za cached image display sa loading states 🆕
 - ✅ **Cloudinary upload service** (za cloud storage) 🆕
 - ✅ **Location service sa GPS tracking** (za check-in lokaciju) 🆕
 - ✅ **Check-in service sa full end-to-end flow** (kamera → cloud → backend) 🆕
+- ✅ **BootstrapService** - App initialization (Isar + BackgroundSync) 🆕
+- ✅ **ExerciseLibraryService** - Exercise library sa caching i search 🆕
+- ✅ **WorkoutTimerService** - Workout timer sa pause/resume 🆕
+- ✅ **AnalyticsService** - Adherence i strength progression calculations 🆕
+- ✅ **LoaderAnimationManager** - Global animation manager za loader animation 🆕
+- ✅ **ProfileStatsService** - Profile statistics calculations (volume, streak, PRs) 🆕
+- ✅ **SettingsService** - Settings persistence (SharedPreferences) 🆕
+- ✅ **WorkoutTemplateService** - Template loading i search 🆕
+- ✅ **PRTracker widget** - Personal Records tracker widget 🆕
+- ✅ **ProgressChart widget** - Volume progression line chart 🆕
+- ✅ **StrengthProgressionChart widget** - Strength progression chart sa exercise selection 🆕
+- ✅ **ThemeController** - Riverpod controller za theme management (TrainerTheme) 🆕
+- ✅ **BootstrapController** - Riverpod controller za app initialization 🆕
 
 ### **Implementirane Funkcionalnosti:**
 - ✅ Checkbox completion sa optimistic UI updates
+- ✅ Loading animations za exercise i set checkboxes (CircularProgressIndicator sa smooth transitions)
 - ✅ Fast completion validation sa humorističnom porukom
 - ✅ Active plan validation za check-in flow
 - ✅ Plan expiration UI handling
 - ✅ Check-in mandatory enforcement edge cases
 - ✅ Retry logic sa eksponencijalnim backoff-om
-- ✅ Improved error handling
+- ✅ Improved error handling (ErrorHandler sa SnackBar/Dialog sa retry button-om)
+- ✅ Empty states implementirani na svim relevantnim stranicama
+- ✅ Skeleton loaders (ShimmerLoader) za loading states
+- ✅ Sync status indicator za real-time sync status
+- ✅ Export functionality (CSV/JSON) u Settings page
+- ✅ Image caching system za efficient image loading
+- ✅ SharedPreferencesService proširen za check-in session management
 - ✅ Monthly paywall UI block
 - ✅ Unlock Next Week UI
 - ✅ **Check-in cloud storage (Cloudinary integration)** 🆕
@@ -2122,9 +2355,16 @@ void _checkMonthlyPaywall() async {
 - ✅ **GPS location tracking sa backend validation** 🆕
 - ✅ **Session management sa login/logout reset** 🆕
 - ✅ **Full end-to-end check-in flow (10 koraka)** 🆕
+- ✅ **AI Messages Management (Admin Dashboard)** 🆕 (Dec 20, 2025)
+- ✅ **AI Messages UI (Client Dashboard)** 🆕 (Dec 20, 2025)
+- ✅ **Quick Templates i Custom Messages** 🆕
+- ✅ **Mark as read sa refresh logikom** 🆕
+- ✅ **ClientProfileId fix (Admin i Client strana)** 🆕
+- ✅ **Utility Services & Widgets** - Bootstrap, ExerciseLibrary, WorkoutTimer, Analytics, ProfileStats, Settings, Templates, Charts 🆕
+- ✅ **Controllers & State Management** - ThemeController, BootstrapController 🆕
 
 ### **Backend API Endpoints Integrisani:**
-- ✅ `/gamification/messages/:clientId` - AI Messages
+- ✅ `/gamification/messages/:clientId` - AI Messages (get messages for client)
 - ✅ `/gamification/balance` - Balance checking
 - ✅ `/gamification/clear-balance` - Balance clearing
 - ✅ `/plans/unlock-next-week/:clientId` - Unlock next week
@@ -2136,6 +2376,10 @@ void _checkMonthlyPaywall() async {
 - ✅ `/checkins/range/start/:startDate/end/:endDate` - Check-ins by date range
 - ✅ **`POST /checkins`** - **Create check-in** (NOVO - Dec 2025) 🆕
 - ✅ **`GET /media/signature`** - **Cloudinary upload signature** (NOVO - Dec 2025) 🆕
+- ✅ **`POST /gamification/generate-message`** - **Create AI message** (Admin, NOVO - Dec 20, 2025) 🆕
+- ✅ **`GET /gamification/messages/all`** - **Get all messages** (Admin batch endpoint, NOVO - Dec 20, 2025) 🆕
+- ✅ **`PATCH /gamification/messages/:messageId/read`** - **Mark message as read** (NOVO - Dec 20, 2025) 🆕
+- ✅ **`GET /clients/profile`** - **Get client profile** (za clientProfileId, NOVO - Dec 20, 2025) 🆕
 
 ---
 

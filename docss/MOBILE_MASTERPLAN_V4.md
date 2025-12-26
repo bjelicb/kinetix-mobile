@@ -46,6 +46,19 @@
 - [ ] Personalized messages based on user progress
 - [ ] Integration sa existing AI Messages system (4.1)
 
+**AI Messaging System (Backend Ready):**
+- ✅ Backend endpoint: `POST /gamification/generate-message`
+- ✅ Backend endpoint: `GET /gamification/messages/:clientId`
+- ✅ AI Message Service sa template-based messaging
+- ✅ Spreman za LLM integraciju (V4 Phase 2)
+- ⚠️ Mobile app treba da prikazuje AI poruke u Dashboard-u
+- ⚠️ Mobile app treba da integriše sa Push Notifications (V4)
+
+**Implementation:**
+- Backend već ima `AIMessageService` sa tone selection
+- Mobile app treba da dodaje AI Messages widget u Dashboard
+- Mobile app treba da prikazuje poruke sa različitim tonovima (aggressive, motivational, etc.)
+
 **Fajlovi:**
 - `lib/services/notification_service.dart` - **NOVO**
 - `lib/services/notification_handler.dart` - **NOVO**

@@ -1,6 +1,4 @@
-import 'dart:io' as io show File;
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:dio/dio.dart';
 import '../data/datasources/local_data_source.dart';
 import '../data/datasources/remote_data_source.dart';
@@ -8,7 +6,7 @@ import '../data/models/workout_collection.dart' if (dart.library.html) '../data/
 import '../data/models/exercise_collection.dart' if (dart.library.html) '../data/models/exercise_collection_stub.dart';
 import '../data/models/checkin_collection.dart' if (dart.library.html) '../data/models/checkin_collection_stub.dart';
 import '../data/mappers/plan_mapper.dart';
-import 'cloudinary_upload_service.dart';
+import 'check_in_queue_service.dart';
 
 /// Error types for categorization
 enum SyncErrorType { network, auth, server, validation, unknown }
@@ -34,10 +32,8 @@ class SyncManager {
 
   final LocalDataSource _localDataSource;
   final RemoteDataSource _remoteDataSource;
-  final CloudinaryUploadService _cloudinaryService;
 
-  SyncManager(this._localDataSource, this._remoteDataSource)
-    : _cloudinaryService = CloudinaryUploadService(_remoteDataSource);
+  SyncManager(this._localDataSource, this._remoteDataSource);
 
   /// Categorize error type for better handling
   SyncErrorType _categorizeError(dynamic error) {
@@ -152,42 +148,23 @@ class SyncManager {
     }
   }
 
-  /// Step 1: Upload pending media (Check-in photos)
+  /// Step 1: Upload pending media (Check-in photos) and sync queued check-ins
   Future<void> _syncMedia() async {
-    final checkInsWithoutUrl = await _localDataSource.getCheckInsWithoutPhotoUrl();
+    debugPrint('[SyncManager] ═══════ MEDIA SYNC START ═══════');
+    debugPrint('[SyncManager] 📤 Syncing queued check-ins (offline -> online)');
 
-    for (final checkIn in checkInsWithoutUrl) {
-      try {
-        // Check if we have a local photo path
-        if (checkIn.photoLocalPath.isEmpty) {
-          continue; // Skip if no local photo
-        }
-
-        // Read image bytes from local file
-        Uint8List imageBytes;
-        if (kIsWeb) {
-          // Web implementation would need different approach
-          continue;
-        } else {
-          final file = io.File(checkIn.photoLocalPath);
-          if (!await file.exists()) {
-            continue; // File doesn't exist, skip
-          }
-          imageBytes = await file.readAsBytes();
-        }
-
-        // Upload to Cloudinary
-        final photoUrl = await _cloudinaryService.uploadCheckInPhoto(imageBytes);
-
-        // Update check-in with photo URL
-        checkIn.photoUrl = photoUrl;
-        checkIn.isSynced = false; // Will be synced in push step
-        await _localDataSource.saveCheckIn(checkIn);
-      } catch (e) {
-        // Continue with other check-ins
-        debugPrint('Failed to upload check-in ${checkIn.id}: $e');
-      }
+    try {
+      final queueService = CheckInQueueService(_localDataSource, _remoteDataSource);
+      await queueService.syncQueuedCheckIns();
+      debugPrint('[SyncManager] ✅ Media sync completed');
+    } catch (queueError, stackTrace) {
+      debugPrint('[SyncManager] ⚠️ Error syncing queued check-ins: $queueError');
+      debugPrint('[SyncManager] Stack trace: $stackTrace');
+      debugPrint('[SyncManager] → Continuing with regular sync...');
+      // Don't throw - continue with push/pull even if media sync fails
     }
+
+    debugPrint('[SyncManager] ═══════ MEDIA SYNC COMPLETE ═══════');
   }
 
   /// Step 2: Push dirty records to server
@@ -212,13 +189,97 @@ class SyncManager {
       // Load exercises for workout
       final exercises = await _localDataSource.getExercisesForWorkout(workout.id);
 
+      // NOVO: Recovery logika - pokušati da dobijemo planId i dayOfWeek pre nego što preskočimo workout
+      WorkoutCollection workoutToSync = workout;
+      bool needsUpdate = false;
+
+      // Try to recover planId if missing
+      if (workoutToSync.planId == null) {
+        debugPrint('[SyncManager] ⚠️ Workout ${workout.id} - planId is null, attempting recovery...');
+        if (workoutToSync.serverId.isNotEmpty) {
+          try {
+            debugPrint('[SyncManager] Recovery: Fetching workout ${workout.serverId} from backend to get planId');
+            final allLogs = await _remoteDataSource.getAllWorkoutLogs();
+            final logData = allLogs.firstWhere(
+              (log) => log['_id']?.toString() == workout.serverId,
+              orElse: () => <String, dynamic>{},
+            );
+
+            if (logData.isNotEmpty) {
+              final weeklyPlanId = logData['weeklyPlanId']?.toString();
+              if (weeklyPlanId != null && weeklyPlanId.isNotEmpty) {
+                debugPrint('[SyncManager] Recovery: Found planId: $weeklyPlanId for workout ${workout.serverId}');
+                workoutToSync.planId = weeklyPlanId;
+                needsUpdate = true;
+              }
+            }
+          } catch (e) {
+            debugPrint('[SyncManager] Recovery: Error fetching planId: $e');
+          }
+        }
+
+        if (workoutToSync.planId == null) {
+          debugPrint('[SyncManager] ⚠️ Skipping workout ${workout.id} - planId is null (recovery failed)');
+          continue; // Skip workout without planId
+        }
+      }
+
+      // Try to recover dayOfWeek if missing
+      if (workoutToSync.dayOfWeek == null) {
+        debugPrint('[SyncManager] ⚠️ Workout ${workout.id} - dayOfWeek is null, attempting recovery...');
+        if (workoutToSync.serverId.isNotEmpty) {
+          try {
+            debugPrint('[SyncManager] Recovery: Fetching workout ${workout.serverId} from backend to get dayOfWeek');
+            final allLogs = await _remoteDataSource.getAllWorkoutLogs();
+            final logData = allLogs.firstWhere(
+              (log) => log['_id']?.toString() == workout.serverId,
+              orElse: () => <String, dynamic>{},
+            );
+
+            if (logData.isNotEmpty && logData['dayOfWeek'] != null) {
+              final dayOfWeek = logData['dayOfWeek'] as int;
+              debugPrint('[SyncManager] Recovery: Found dayOfWeek: $dayOfWeek for workout ${workout.serverId}');
+              workoutToSync.dayOfWeek = dayOfWeek;
+              needsUpdate = true;
+            }
+          } catch (e) {
+            debugPrint('[SyncManager] Recovery: Error fetching dayOfWeek: $e');
+          }
+        }
+
+        if (workoutToSync.dayOfWeek == null) {
+          debugPrint('[SyncManager] ⚠️ Skipping workout ${workout.id} - dayOfWeek is null (recovery failed)');
+          continue; // Skip workout without dayOfWeek
+        }
+      }
+
+      // Update workout in local database if recovery was successful
+      if (needsUpdate) {
+        debugPrint('[SyncManager] Recovery: Updating workout ${workout.id} with recovered planId/dayOfWeek');
+        await _localDataSource.saveWorkout(workoutToSync);
+      }
+
+      // NOVO: Skip if workout is currently syncing (lock mechanism)
+      if (workout.isSyncing) {
+        debugPrint('[SyncManager] Skipping workout ${workout.id} - currently syncing (isSyncing=true)');
+        continue;
+      }
+
+      // Skip if workout was just synced (isDirty might be stale) - dupli push scenario
+      // ignore: unnecessary_null_comparison
+      if (workout.serverId != null && !workout.isDirty) {
+        debugPrint('[SyncManager] Skipping workout ${workout.id} - already synced (serverId exists, isDirty=false)');
+        continue;
+      }
+
       // Convert workout to API format
-      // Note: WorkoutCollection doesn't have weeklyPlanId, dayOfWeek, etc.
-      // These would need to be added to the model or extracted from workout name/date
       newLogs.add({
         'workoutDate': workout.scheduledDate.toIso8601String(),
-        'weeklyPlanId': workout.serverId, // Use serverId as fallback
-        'dayOfWeek': workout.scheduledDate.weekday,
+        'weeklyPlanId':
+            workout.planId!, // ISPRAVKA: Koristiti planId, NE serverId (serverId je WorkoutLog _id, ne plan ID)
+        'dayOfWeek': workout
+            .dayOfWeek!, // ISPRAVKA: Koristiti dayOfWeek (plan day index 1-7), NE scheduledDate.weekday (to je calendar day, ne plan day index)
+        // dayOfWeek je pozicija u planu (1-7), ne calendar day of week
         'completedExercises': exercises
             .map(
               (e) => {
@@ -282,11 +343,18 @@ class SyncManager {
 
       // Update local records based on server response
       // Mark as not dirty, update serverId if new, etc.
+      // Note: We need to track which workouts were actually synced (those that passed validation)
+      // For now, we'll update all workouts that were in the batch
+      // TODO: Match workouts by ID or serverId from response
       for (final workout in dirtyWorkouts) {
-        workout.isDirty = false;
-        workout.updatedAt = DateTime.now();
-        await _localDataSource.saveWorkout(workout);
-        successCount++;
+        // Only update if workout has planId and dayOfWeek (was successfully prepared for sync)
+        final workoutToUpdate = await _localDataSource.getWorkoutById(workout.id);
+        if (workoutToUpdate != null && workoutToUpdate.planId != null && workoutToUpdate.dayOfWeek != null) {
+          workoutToUpdate.isDirty = false;
+          workoutToUpdate.updatedAt = DateTime.now();
+          await _localDataSource.saveWorkout(workoutToUpdate);
+          successCount++;
+        }
       }
 
       for (final checkIn in unsyncedCheckIns) {
@@ -465,7 +533,7 @@ class SyncManager {
 
     // If Isar has no workouts, use a much older date to get all data (full sync)
     final needsFullSync = workouts.isEmpty;
-    
+
     if (needsFullSync) {
       // Full sync - get all data from 1 year ago
       lastSync = DateTime.now().subtract(const Duration(days: 365));
@@ -646,7 +714,7 @@ class SyncManager {
 
       // Process and save exercises from planExercises or completedExercises
       final exercisesToSave = <ExerciseCollection>[];
-      
+
       // Try planExercises first (from backend enrichment)
       if (workoutData['planExercises'] != null) {
         final planExercises = workoutData['planExercises'] as List<dynamic>;
@@ -657,11 +725,13 @@ class SyncManager {
           // Add planned sets info as WorkoutSet objects
           final planSets = exData['sets'] as int? ?? 3;
           final planReps = exData['reps'] as int? ?? 10;
-          exercise.sets = List.generate(planSets, (i) => WorkoutSet()
-            ..id = 'planned-${i + 1}'
-            ..weight = 0
-            ..reps = planReps
-            ..isCompleted = false
+          exercise.sets = List.generate(
+            planSets,
+            (i) => WorkoutSet()
+              ..id = 'planned-${i + 1}'
+              ..weight = 0
+              ..reps = planReps
+              ..isCompleted = false,
           );
           exercisesToSave.add(exercise);
         }
@@ -678,7 +748,7 @@ class SyncManager {
         }
         debugPrint('[SyncManager] → Parsed ${exercisesToSave.length} exercises from completedExercises');
       }
-      
+
       // Save exercises and link to workout
       if (exercisesToSave.isNotEmpty) {
         await _localDataSource.saveExercisesForWorkout(workout.id, exercisesToSave);

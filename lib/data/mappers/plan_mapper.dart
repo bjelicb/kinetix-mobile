@@ -48,6 +48,11 @@ class PlanMapper {
       }
     }
     
+    // Extract isFromHistory flag (defaults to false if not present)
+    final isFromHistory = dto['isFromHistory'] as bool? ?? false;
+    // Extract planStatus (defaults to 'current' if not present)
+    final planStatus = dto['planStatus'] as String? ?? 'current';
+    
     final plan = Plan(
       id: planId,
       name: planName,
@@ -59,6 +64,8 @@ class PlanMapper {
       workoutDays: workoutsField
           .map((w) => _workoutDayFromDto(w as Map<String, dynamic>))
           .toList(),
+      isFromHistory: isFromHistory,
+      planStatus: planStatus,
     );
     
     debugPrint('[PlanMapper] ✓ Entity created: ${plan.name} with ${plan.workoutDays.length} workout days');
@@ -96,6 +103,8 @@ class PlanMapper {
       workoutDays: collection.workoutDays
           .map((day) => _workoutDayFromEmbedded(day))
           .toList(),
+      isFromHistory: false, // Default to false for stored plans
+      planStatus: 'current', // Default to current for stored plans
     );
   }
   

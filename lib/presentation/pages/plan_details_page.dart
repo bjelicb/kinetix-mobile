@@ -7,6 +7,7 @@ import '../widgets/gradient_background.dart';
 import '../widgets/shimmer_loader.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/plans/plan_day_widget.dart';
+import '../widgets/unlock_button.dart';
 
 class PlanDetailsPage extends ConsumerWidget {
   final String planId;
@@ -19,6 +20,7 @@ class PlanDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planAsync = ref.watch(planByIdProvider(planId));
+    final currentPlanAsync = ref.watch(currentPlanProvider);
     
     return GradientBackground(
       child: Scaffold(
@@ -73,6 +75,66 @@ class PlanDetailsPage extends ConsumerWidget {
                 );
               }
               
+              // Check if this is a future plan (not unlocked)
+              final currentPlan = currentPlanAsync.valueOrNull;
+              final isFuturePlan = currentPlan != null && 
+                                   currentPlan.id == plan.id && 
+                                   currentPlan.planStatus == 'future';
+              
+              // If future plan, show locked message
+              if (isFuturePlan) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.lock_outline_rounded,
+                            size: 64,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'This Plan is Locked',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Unlock this plan to view details and start training',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 32),
+                        const UnlockButton(),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              
               // Sort workout days by dayOfWeek
               final sortedDays = List.from(plan.workoutDays)
                 ..sort((a, b) => a.dayOfWeek.compareTo(b.dayOfWeek));
@@ -86,41 +148,49 @@ class PlanDetailsPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Difficulty badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getDifficultyColor(plan.difficulty)
-                                  .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _getDifficultyColor(plan.difficulty)
-                                    .withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.speed_rounded,
-                                  size: 16,
-                                  color: _getDifficultyColor(plan.difficulty),
+                          // Difficulty badge + Unlock Button
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  plan.difficulty,
-                                  style: TextStyle(
-                                    color: _getDifficultyColor(plan.difficulty),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                decoration: BoxDecoration(
+                                  color: _getDifficultyColor(plan.difficulty)
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _getDifficultyColor(plan.difficulty)
+                                        .withValues(alpha: 0.3),
+                                    width: 1,
                                   ),
                                 ),
-                              ],
-                            ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.speed_rounded,
+                                      size: 16,
+                                      color: _getDifficultyColor(plan.difficulty),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      plan.difficulty,
+                                      style: TextStyle(
+                                        color: _getDifficultyColor(plan.difficulty),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: UnlockButton(compact: true),
+                              ),
+                            ],
                           ),
                           
                           // Description if available

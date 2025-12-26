@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:confetti/confetti.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/gradients.dart';
 import '../../domain/entities/workout.dart';
@@ -12,6 +13,7 @@ import '../../presentation/widgets/neon_button.dart';
 import '../../presentation/widgets/shimmer_loader.dart';
 import '../../presentation/pages/calendar/utils/calendar_utils.dart';
 import '../../core/utils/haptic_feedback.dart';
+import '../../presentation/pages/workout/services/workout_state_service.dart';
 
 class WorkoutDetailsPage extends ConsumerWidget {
   final String workoutId;
@@ -63,7 +65,7 @@ class WorkoutDetailsPage extends ConsumerWidget {
 
               // Handle rest days
               if (workout.isRestDay) {
-                return _buildRestDayView(context, workout);
+                return _buildRestDayView(context, ref, workout);
               }
 
               return _buildWorkoutDetailsView(context, workout);
@@ -85,7 +87,7 @@ class WorkoutDetailsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildRestDayView(BuildContext context, Workout workout) {
+  Widget _buildRestDayView(BuildContext context, WidgetRef ref, Workout workout) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -110,9 +112,91 @@ class WorkoutDetailsPage extends ConsumerWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
           ),
+          const SizedBox(height: 32),
+          // Mark as Completed Button
+          NeonButton(
+            text: workout.isCompleted ? 'Already Completed' : 'Mark as Completed',
+            icon: Icons.check_circle_rounded,
+            onPressed: workout.isCompleted || workout.isMissed
+                ? null
+                : () {
+                    AppHaptic.medium();
+                    _finishRestDayWorkout(context, ref, workout);
+                  },
+            gradient: AppGradients.primary,
+          ),
+          const SizedBox(height: 12),
+          // Mark as Missed Button
+          NeonButton(
+            text: workout.isMissed ? 'Already Missed' : 'Mark as Missed',
+            icon: Icons.close_rounded,
+            onPressed: workout.isCompleted || workout.isMissed
+                ? null
+                : () {
+                    AppHaptic.medium();
+                    _markRestDayAsMissed(context, ref, workout);
+                  },
+            gradient: AppGradients.error,
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _finishRestDayWorkout(BuildContext context, WidgetRef ref, Workout workout) async {
+    debugPrint('[WorkoutDetailsPage:RestDay] ═══════════════════════════════════════');
+    debugPrint('[WorkoutDetailsPage:RestDay] _finishRestDayWorkout() START');
+    debugPrint('[WorkoutDetailsPage:RestDay] Workout: ${workout.name} (ID: ${workout.id})');
+    
+    final confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    
+    try {
+      await WorkoutStateService.finishWorkout(
+        workout: workout,
+        ref: ref,
+        context: context,
+        confettiController: confettiController,
+      );
+      
+      debugPrint('[WorkoutDetailsPage:RestDay] ✅ Rest day workout finished successfully');
+      
+      // Refresh workout data
+      ref.invalidate(workoutControllerProvider);
+    } catch (e, stackTrace) {
+      debugPrint('[WorkoutDetailsPage:RestDay] ❌❌❌ ERROR finishing rest day workout ❌❌❌');
+      debugPrint('[WorkoutDetailsPage:RestDay] Error: $e');
+      debugPrint('[WorkoutDetailsPage:RestDay] StackTrace: $stackTrace');
+      // Error dialog is already shown in finishWorkout(), just log here
+    } finally {
+      confettiController.dispose();
+      debugPrint('[WorkoutDetailsPage:RestDay] ═══════════════════════════════════════');
+    }
+  }
+
+  Future<void> _markRestDayAsMissed(BuildContext context, WidgetRef ref, Workout workout) async {
+    debugPrint('[WorkoutDetailsPage:RestDay] ═══════════════════════════════════════');
+    debugPrint('[WorkoutDetailsPage:RestDay] _markRestDayAsMissed() START');
+    debugPrint('[WorkoutDetailsPage:RestDay] Workout: ${workout.name} (ID: ${workout.id})');
+    
+    try {
+      await WorkoutStateService.markAsMissed(
+        workout: workout,
+        ref: ref,
+        context: context,
+      );
+      
+      debugPrint('[WorkoutDetailsPage:RestDay] ✅ Rest day workout marked as missed successfully');
+      
+      // Refresh workout data
+      ref.invalidate(workoutControllerProvider);
+    } catch (e, stackTrace) {
+      debugPrint('[WorkoutDetailsPage:RestDay] ❌❌❌ ERROR marking rest day as missed ❌❌❌');
+      debugPrint('[WorkoutDetailsPage:RestDay] Error: $e');
+      debugPrint('[WorkoutDetailsPage:RestDay] StackTrace: $stackTrace');
+      // Error dialog is already shown in markAsMissed(), just log here
+    }
+    
+    debugPrint('[WorkoutDetailsPage:RestDay] ═══════════════════════════════════════');
   }
 
   Widget _buildWorkoutDetailsView(BuildContext context, Workout workout) {

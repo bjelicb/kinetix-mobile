@@ -10,14 +10,8 @@ void main() {
     testWidgets('shows nothing when plan is null', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            currentPlanProvider.overrideWith((ref) async => null),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: CurrentPlanCard(),
-            ),
-          ),
+          overrides: [currentPlanProvider.overrideWith((ref) async => null)],
+          child: const MaterialApp(home: Scaffold(body: CurrentPlanCard())),
         ),
       );
 
@@ -34,30 +28,22 @@ void main() {
         difficulty: 'INTERMEDIATE',
         trainerId: 'trainer123',
         workoutDays: [
-          WorkoutDay(
-            dayOfWeek: 1,
-            isRestDay: false,
-            name: 'Push Day',
-            exercises: [],
-            estimatedDuration: 60,
-          ),
+          WorkoutDay(dayOfWeek: 1, isRestDay: false, name: 'Push Day', exercises: [], estimatedDuration: 60),
         ],
       );
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            currentPlanProvider.overrideWith((ref) async => testPlan),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: CurrentPlanCard(),
-            ),
-          ),
+          overrides: [currentPlanProvider.overrideWith((ref) => Future.value(testPlan))],
+          child: const MaterialApp(home: Scaffold(body: CurrentPlanCard())),
         ),
       );
 
-      await tester.pumpAndSettle();
+      // First pump to build widget
+      await tester.pump();
+
+      // Wait for async operations to complete
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Should show plan name
       expect(find.text('Test Plan'), findsOneWidget);
@@ -65,4 +51,3 @@ void main() {
     });
   });
 }
-

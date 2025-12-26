@@ -1,11 +1,20 @@
 // Stub Isar extensions for web platform
 // These methods will never be called (kIsWeb guards) but need to compile
 import 'package:isar/isar.dart';
+// Import stub files for type definitions
 import 'user_collection_stub.dart';
 import 'workout_collection_stub.dart';
 import 'exercise_collection_stub.dart';
 import 'checkin_collection_stub.dart';
 import 'plan_collection_stub.dart';
+import 'ai_message_collection_stub.dart';
+// Re-export stub files so types are available to other files
+export 'user_collection_stub.dart';
+export 'workout_collection_stub.dart';
+export 'exercise_collection_stub.dart';
+export 'checkin_collection_stub.dart';
+export 'plan_collection_stub.dart';
+export 'ai_message_collection_stub.dart';
 
 // Stub query builder for type compatibility
 class StubQueryBuilder<T> {
@@ -16,6 +25,7 @@ class StubQueryBuilder<T> {
   StubQueryBuilder<T> planIdEqualTo(String value) => this;
   StubQueryBuilder<T> trainerIdEqualTo(String value) => this;
   StubQueryBuilder<T> scheduledDateGreaterThan(DateTime value) => this;
+  StubQueryBuilder<T> clientIdEqualTo(String value) => this;
   Future<List<T>> findAll() async => [];
   Future<T?> findFirst() async => null;
 }
@@ -48,5 +58,9 @@ extension CheckInCollectionStub on Isar {
 
 extension PlanCollectionStub on Isar {
   StubCollection<PlanCollection> get planCollections => StubCollection<PlanCollection>();
+}
+
+extension AIMessageCollectionStub on Isar {
+  StubCollection<AIMessageCollection> get aIMessageCollections => StubCollection<AIMessageCollection>();
 }
 

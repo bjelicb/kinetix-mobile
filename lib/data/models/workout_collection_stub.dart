@@ -24,11 +24,14 @@ class WorkoutCollection {
   int id = 0; // Match Isar Id type
   String serverId = '';
   String name = '';
+  String? planId; // Weekly plan ID (from backend: weeklyPlanId)
   DateTime scheduledDate = DateTime.now();
+  int? dayOfWeek; // Plan day index (1-7) - pozicija u planu, NE calendar weekday
   bool isCompleted = false;
   bool isMissed = false;
   bool isRestDay = false;
   bool isDirty = false;
+  bool isSyncing = false; // NOVO: Lock flag to prevent race conditions (dupli push scenario)
   DateTime updatedAt = DateTime.now();
   
   // Stub for IsarLinks relation
@@ -39,11 +42,14 @@ class WorkoutCollection {
   Map<String, dynamic> toJson() => {
     'serverId': serverId,
     'name': name,
+    'planId': planId,
     'scheduledDate': scheduledDate.toIso8601String(),
+    'dayOfWeek': dayOfWeek,
     'isCompleted': isCompleted,
     'isMissed': isMissed,
     'isRestDay': isRestDay,
     'isDirty': isDirty,
+    'isSyncing': isSyncing,
     'updatedAt': updatedAt.toIso8601String(),
   };
 }

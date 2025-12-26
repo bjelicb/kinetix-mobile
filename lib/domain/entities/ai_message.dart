@@ -72,3 +72,10 @@ enum AIMessageTone {
   warning,
 }
 
+enum AIMessageTrigger {
+  missedWorkouts,
+  streak,
+  weightSpike,
+  sickDay,
+}
+

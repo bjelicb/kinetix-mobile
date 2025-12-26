@@ -1,15 +1,32 @@
 import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+part 'remote_data_source.g.dart';
 
 class RemoteDataSource {
   final Dio _dio;
   final FlutterSecureStorage _storage;
   bool _isRefreshing = false;
   late final Dio _refreshDio; // Separate Dio instance for refresh calls to avoid interceptor loops
+
+  /// Helper method to extract data from TransformInterceptor wrapper
+  /// Backend wraps all responses in { success: true, data: ... }
+  /// Returns the unwrapped data, or null if response format is invalid
+  Map<String, dynamic>? _unwrapResponse(dynamic responseData) {
+    if (responseData is Map<String, dynamic>) {
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return responseData['data'] as Map<String, dynamic>;
+      }
+      // Fallback: return as-is if no wrapper (for backward compatibility)
+      return responseData;
+    }
+    return null;
+  }
 
   RemoteDataSource(this._dio, this._storage) {
     // Configure Dio
@@ -273,29 +290,101 @@ class RemoteDataSource {
     }
   }
 
-  Future<Map<String, dynamic>> logWorkout(Map<String, dynamic> data) async {
+  /// Get ALL workout logs (completed, pending, missed) for the client
+  /// This replaces getWeekWorkouts() to load all workout logs from all plans
+  Future<dynamic> getAllWorkoutLogs() async {
     try {
-      final response = await _dio.post(ApiConstants.workoutsLog, data: data);
+      final response = await _dio.get(ApiConstants.workoutsAllLogs);
 
-      if (response.data['success'] == true) {
+      // Handle both cases: wrapped response or direct array
+      if (response.data is List) {
+        // Direct array response (if interceptor doesn't wrap)
+        return {'data': response.data};
+      } else if (response.data is Map && response.data['success'] == true) {
+        // Wrapped response: {success: true, data: [...]}
+        return response.data['data'];
+      } else if (response.data is Map && response.data.containsKey('data')) {
+        // Response has data field but no success field
         return response.data['data'];
       }
-      throw Exception(response.data['message'] ?? 'Failed to log workout');
+      throw Exception(response.data['message'] ?? 'Failed to get all workout logs');
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }
 
-  Future<Map<String, dynamic>> updateWorkoutLog(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> logWorkout(Map<String, dynamic> data) async {
     try {
-      final response = await _dio.put('${ApiConstants.workoutsLog}/$id', data: data);
+      developer.log('[RemoteDataSource:LogWorkout] ═══════════════════════════════════════', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Calling POST ${ApiConstants.workoutsLog}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Request data: $data', name: 'RemoteDataSource');
+      
+      final response = await _dio.post(ApiConstants.workoutsLog, data: data);
+      
+      developer.log('[RemoteDataSource:LogWorkout] Response status: ${response.statusCode}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Response data: ${response.data}', name: 'RemoteDataSource');
 
       if (response.data['success'] == true) {
+        developer.log('[RemoteDataSource:LogWorkout] ✅ Success - returning data', name: 'RemoteDataSource');
+        developer.log('[RemoteDataSource:LogWorkout] ═══════════════════════════════════════', name: 'RemoteDataSource');
         return response.data['data'];
       }
-      throw Exception(response.data['message'] ?? 'Failed to update workout');
+      
+      final errorMessage = response.data['message'] ?? 'Failed to log workout';
+      developer.log('[RemoteDataSource:LogWorkout] ❌ Backend error: $errorMessage', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] ═══════════════════════════════════════', name: 'RemoteDataSource');
+      throw Exception(errorMessage);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      developer.log('[RemoteDataSource:LogWorkout] ❌ DioException caught', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Exception type: ${e.type}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Exception message: ${e.message}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Response status: ${e.response?.statusCode}', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] Response data: ${e.response?.data}', name: 'RemoteDataSource');
+      
+      // Check if it's a real network error or backend validation error
+      final isNetworkError = e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.connectionError ||
+          e.response == null; // No response = network error
+      
+      if (isNetworkError) {
+        developer.log('[RemoteDataSource:LogWorkout] → Real network error detected', name: 'RemoteDataSource');
+        developer.log('[RemoteDataSource:LogWorkout] ═══════════════════════════════════════', name: 'RemoteDataSource');
+        throw Exception('Network error: ${e.message}');
+      } else {
+        // Backend returned an error response (400, 401, 500, etc.)
+        final errorMessage = e.response?.data['message'] ?? 'Backend error: ${e.response?.statusCode}';
+        developer.log('[RemoteDataSource:LogWorkout] → Backend validation/error: $errorMessage', name: 'RemoteDataSource');
+        developer.log('[RemoteDataSource:LogWorkout] ═══════════════════════════════════════', name: 'RemoteDataSource');
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      developer.log('[RemoteDataSource:LogWorkout] ❌ Unexpected error: $e', name: 'RemoteDataSource');
+      developer.log('[RemoteDataSource:LogWorkout] ═══════════════════════════════════════', name: 'RemoteDataSource');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateWorkoutLog(String id, Map<String, dynamic> data) async {
+    // ✅ Backend endpoint is @Patch(':id') on @Controller('workouts'), so it's /workouts/:id
+    final endpoint = '/workouts/$id';
+    developer.log('updateWorkoutLog() calling $endpoint', name: 'RemoteDataSource:UpdateWorkoutLog');
+    developer.log('updateWorkoutLog() data: $data', name: 'RemoteDataSource:UpdateWorkoutLog');
+    try {
+      // ✅ Use PATCH instead of PUT to match backend @Patch(':id') endpoint
+      final response = await _dio.patch(endpoint, data: data);
+      developer.log('updateWorkoutLog() response status: ${response.statusCode}', name: 'RemoteDataSource:UpdateWorkoutLog');
+      developer.log('updateWorkoutLog() response data: ${response.data}', name: 'RemoteDataSource:UpdateWorkoutLog');
+      
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return response.data;
+    } on DioException catch (e) {
+      developer.log('updateWorkoutLog() error: ${e.message}', name: 'RemoteDataSource:UpdateWorkoutLog');
+      developer.log('updateWorkoutLog() error response: ${e.response?.data}', name: 'RemoteDataSource:UpdateWorkoutLog');
+      throw Exception(e.response?.data['message'] ?? 'Failed to update workout log');
     }
   }
 
@@ -408,23 +497,14 @@ class RemoteDataSource {
   // Check-in Methods
   Future<Map<String, dynamic>> createCheckIn(Map<String, dynamic> data) async {
     try {
-      debugPrint('[RemoteDataSource] POST /checkins');
-      debugPrint('[RemoteDataSource] Request data: ${data.keys.join(", ")}');
-      
       final response = await _dio.post(ApiConstants.checkIns, data: data);
-
-      debugPrint('[RemoteDataSource] Response status: ${response.statusCode}');
-      debugPrint('[RemoteDataSource] Response data: ${response.data}');
       
       if (response.data['success'] == true) {
-        debugPrint('[RemoteDataSource] ✅ Check-in created successfully');
         return response.data['data'];
       }
       throw Exception(response.data['message'] ?? 'Failed to create check-in');
     } on DioException catch (e) {
-      debugPrint('[RemoteDataSource] ❌ DioException: ${e.type}');
-      debugPrint('[RemoteDataSource] Status code: ${e.response?.statusCode}');
-      debugPrint('[RemoteDataSource] Error message: ${e.response?.data}');
+      debugPrint('[RemoteDataSource] ❌ Error creating check-in: ${e.response?.statusCode}');
       throw Exception(e.response?.data['message'] ?? 'Network error');
     }
   }
@@ -570,8 +650,13 @@ class RemoteDataSource {
 
   Future<void> clearBalance() async {
     try {
-      await _dio.post(ApiConstants.gamificationClearBalance);
+      developer.log('clearBalance() calling ${ApiConstants.gamificationClearBalance}', name: 'RemoteDataSource:ClearBalance');
+      final response = await _dio.post(ApiConstants.gamificationClearBalance);
+      developer.log('clearBalance() response status: ${response.statusCode}', name: 'RemoteDataSource:ClearBalance');
+      developer.log('clearBalance() response data: ${response.data}', name: 'RemoteDataSource:ClearBalance');
     } on DioException catch (e) {
+      developer.log('clearBalance() error: ${e.message}', name: 'RemoteDataSource:ClearBalance');
+      developer.log('clearBalance() error response: ${e.response?.data}', name: 'RemoteDataSource:ClearBalance');
       throw Exception(e.response?.data['message'] ?? 'Failed to clear balance');
     }
   }
@@ -1278,26 +1363,117 @@ class RemoteDataSource {
     }
   }
 
+  // ========== CLIENT PROFILE API ==========
+
+  /// Get client profile (returns clientProfileId)
+  /// GET /clients/profile
+  Future<Map<String, dynamic>> getClientProfile(String userId) async {
+    try {
+      final response = await _dio.get('/clients/profile');
+
+      // Handle wrapped response format (success + data)
+      if (response.data is Map<String, dynamic>) {
+        final responseMap = response.data as Map<String, dynamic>;
+        
+        // If response is wrapped with 'success' and 'data', unwrap it
+        if (responseMap.containsKey('success') && responseMap.containsKey('data')) {
+          final data = responseMap['data'];
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+        }
+        
+        // Otherwise return as-is (direct data)
+        return responseMap;
+      }
+
+      throw Exception('Unexpected response format');
+    } on DioException catch (e) {
+      debugPrint('[RemoteDataSource] ❌ Error getting client profile: ${e.response?.statusCode}');
+      rethrow;
+    }
+  }
+
   // ========== AI MESSAGES API ==========
 
   /// Get AI messages for a client
   /// GET /gamification/messages/:clientId
   Future<List<Map<String, dynamic>>> getAIMessages(String clientId) async {
     try {
-      developer.log('[RemoteDataSource:AIMessages] getAIMessages for clientId: $clientId');
       final response = await _dio.get('/gamification/messages/$clientId');
 
+      // Handle different response formats
       if (response.data is List) {
-        return List<Map<String, dynamic>>.from(response.data);
-      } else if (response.data is Map && response.data['data'] is List) {
-        return List<Map<String, dynamic>>.from(response.data['data']);
+        final messages = List<Map<String, dynamic>>.from(response.data);
+        return messages;
+      } else if (response.data is Map) {
+        final responseMap = response.data as Map<String, dynamic>;
+        if (responseMap['success'] == true && responseMap['data'] is List) {
+          final messages = List<Map<String, dynamic>>.from(responseMap['data']);
+          return messages;
+        } else if (responseMap['data'] is List) {
+          final messages = List<Map<String, dynamic>>.from(responseMap['data']);
+          return messages;
+        }
       }
 
-      developer.log('[RemoteDataSource:AIMessages] ✓ Loaded ${response.data.length} messages');
       return [];
     } on DioException catch (e) {
-      developer.log('[RemoteDataSource:AIMessages] ✗ Error: ${e.message}', error: e);
-      throw Exception(e.response?.data['message'] ?? 'Failed to load AI messages');
+      debugPrint('[RemoteDataSource] ⚠️ Error loading AI messages: ${e.response?.statusCode}');
+      
+      // Handle rate limiting (429) - return empty list and let retry happen at higher level
+      if (e.response?.statusCode == 429) {
+        return [];
+      }
+      
+      // If 404 or empty response, return empty list instead of throwing
+      if (e.response?.statusCode == 404 || e.response?.statusCode == 200) {
+        return [];
+      }
+      
+      // For other errors, return empty list to prevent breaking the entire list
+      return [];
+    } catch (e) {
+      debugPrint('[RemoteDataSource] ⚠️ Unexpected error loading AI messages: $e');
+      return [];
+    }
+  }
+
+  /// GET /gamification/messages/all (Admin only)
+  /// Get all AI messages across all clients
+  Future<List<Map<String, dynamic>>> getAllAIMessages() async {
+    try {
+      final response = await _dio.get('/gamification/messages/all');
+
+      // Handle different response formats
+      if (response.data is List) {
+        final messages = List<Map<String, dynamic>>.from(response.data);
+        return messages;
+      } else if (response.data is Map) {
+        final responseMap = response.data as Map<String, dynamic>;
+        if (responseMap['success'] == true && responseMap['data'] is List) {
+          final messages = List<Map<String, dynamic>>.from(responseMap['data']);
+          return messages;
+        } else if (responseMap['data'] is List) {
+          final messages = List<Map<String, dynamic>>.from(responseMap['data']);
+          return messages;
+        }
+      }
+
+      return [];
+    } on DioException catch (e) {
+      debugPrint('[RemoteDataSource] ⚠️ Error loading all AI messages: ${e.response?.statusCode}');
+      
+      // Handle rate limiting (429) - return empty list
+      if (e.response?.statusCode == 429) {
+        return [];
+      }
+      
+      // For other errors, return empty list to prevent breaking
+      return [];
+    } catch (e) {
+      debugPrint('[RemoteDataSource] ⚠️ Unexpected error loading all AI messages: $e');
+      return [];
     }
   }
 
@@ -1314,34 +1490,107 @@ class RemoteDataSource {
     }
   }
 
+  /// Generate AI message (template or custom)
+  /// POST /gamification/generate-message
+  Future<Map<String, dynamic>> generateAIMessage({
+    required String clientId,
+    required String trigger,
+    String? customMessage,
+    String? tone,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final requestData = {
+        'clientId': clientId,
+        'trigger': trigger,
+        if (customMessage != null) 'customMessage': customMessage,
+        if (tone != null) 'tone': tone,
+        if (metadata != null && metadata.isNotEmpty) 'metadata': metadata,
+      };
+      
+      final response = await _dio.post('/gamification/generate-message', data: requestData);
+
+      // TransformInterceptor wraps response in {success: true, data: ...}
+      // But handle both wrapped and unwrapped responses
+      if (response.data is Map) {
+        final responseMap = response.data as Map<String, dynamic>;
+        if (responseMap['success'] == true) {
+          return responseMap['data'] ?? responseMap;
+        }
+        // If no 'success' field, assume it's the data directly (shouldn't happen with TransformInterceptor)
+        if (responseMap.containsKey('_id') || responseMap.containsKey('message')) {
+          return responseMap;
+        }
+      }
+      
+      throw Exception(response.data['message'] ?? 'Failed to generate message');
+    } on DioException catch (e) {
+      debugPrint('[RemoteDataSource] ❌ Error generating AI message: ${e.response?.statusCode}');
+      throw Exception(e.response?.data['message'] ?? 'Failed to generate message');
+    } catch (e) {
+      debugPrint('[RemoteDataSource] ❌ Unexpected error generating AI message: $e');
+      throw Exception('Failed to generate message: $e');
+    }
+  }
+
   // ========== PLANS API - UNLOCK NEXT WEEK ==========
 
   /// Check if client can unlock next week
   /// GET /plans/unlock-next-week/:clientId
   Future<bool> canUnlockNextWeek(String clientId) async {
     try {
-      developer.log('[RemoteDataSource:UnlockWeek] canUnlockNextWeek for clientId: $clientId');
       final response = await _dio.get('/plans/unlock-next-week/$clientId');
 
-      final canUnlock = response.data['canUnlock'] ?? false;
-      developer.log('[RemoteDataSource:UnlockWeek] ✓ Can unlock: $canUnlock');
+      // Handle TransformInterceptor wrapper: { success: true, data: { canUnlock: true } }
+      final unwrappedData = _unwrapResponse(response.data);
+      final canUnlock = unwrappedData?['canUnlock'] ?? false;
+      
       return canUnlock;
     } on DioException catch (e) {
-      developer.log('[RemoteDataSource:UnlockWeek] ✗ Error: ${e.message}', error: e);
+      debugPrint('[RemoteDataSource] ❌ Error checking unlock status: ${e.response?.statusCode}');
       // Return false on error (fail-safe)
+      return false;
+    } catch (e, stackTrace) {
+      developer.log('[RemoteDataSource:UnlockWeek] ✗ Unexpected error: $e');
+      developer.log('[RemoteDataSource:UnlockWeek] Stack trace: $stackTrace');
+      developer.log('═══════════════════════════════════════════════════════════');
       return false;
     }
   }
 
   /// Request next week plan assignment
   /// POST /plans/request-next-week/:clientId
-  Future<void> requestNextWeek(String clientId) async {
+  Future<Map<String, dynamic>?> requestNextWeek(String clientId) async {
     try {
-      developer.log('[RemoteDataSource:UnlockWeek] requestNextWeek for clientId: $clientId');
-      await _dio.post('/plans/request-next-week/$clientId');
+      developer.log('[RemoteDataSource:UnlockWeek] requestNextWeek START - clientId: $clientId');
+      developer.log('[RemoteDataSource:UnlockWeek] Request payload: { clientId: $clientId }');
+      developer.log('[RemoteDataSource:UnlockWeek] POST /plans/request-next-week/$clientId');
+      
+      final response = await _dio.post('/plans/request-next-week/$clientId');
+      
       developer.log('[RemoteDataSource:UnlockWeek] ✓ Request sent successfully');
+      developer.log('[RemoteDataSource:UnlockWeek] Response status: ${response.statusCode}');
+      developer.log('[RemoteDataSource:UnlockWeek] Response data: ${response.data}');
+      developer.log('[RemoteDataSource:UnlockWeek] Response data type: ${response.data.runtimeType}');
+      
+      // Use _unwrapResponse() for consistent parsing (TransformInterceptor wrapper)
+      final unwrappedData = _unwrapResponse(response.data);
+      
+      if (unwrappedData != null) {
+        developer.log('[RemoteDataSource:UnlockWeek] ✓ Successfully unwrapped response');
+        developer.log('[RemoteDataSource:UnlockWeek]   - currentPlanId: ${unwrappedData['currentPlanId']}');
+        developer.log('[RemoteDataSource:UnlockWeek]   - message: ${unwrappedData['message']}');
+        developer.log('[RemoteDataSource:UnlockWeek]   - balance: ${unwrappedData['balance']}');
+        developer.log('[RemoteDataSource:UnlockWeek]   - monthlyBalance: ${unwrappedData['monthlyBalance']}');
+      } else {
+        developer.log('[RemoteDataSource:UnlockWeek] ⚠️ Failed to unwrap response data');
+      }
+      
+      return unwrappedData;
     } on DioException catch (e) {
       developer.log('[RemoteDataSource:UnlockWeek] ✗ Error: ${e.message}', error: e);
+      developer.log('[RemoteDataSource:UnlockWeek] Error response: ${e.response?.data}');
+      developer.log('[RemoteDataSource:UnlockWeek] Error status: ${e.response?.statusCode}');
       throw Exception(e.response?.data['message'] ?? 'Failed to request next week');
     }
   }
@@ -1371,4 +1620,13 @@ class RemoteDataSource {
       throw Exception(e.response?.data['message'] ?? 'Failed to load check-ins');
     }
   }
+}
+
+/// Riverpod provider for RemoteDataSource
+/// Creates a singleton instance of RemoteDataSource with Dio and FlutterSecureStorage
+@riverpod
+RemoteDataSource remoteDataSource(RemoteDataSourceRef ref) {
+  final dio = Dio();
+  final storage = FlutterSecureStorage();
+  return RemoteDataSource(dio, storage);
 }

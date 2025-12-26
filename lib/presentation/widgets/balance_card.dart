@@ -8,19 +8,18 @@ class BalanceCard extends StatelessWidget {
   final double balance;
   final double monthlyBalance;
   final DateTime? lastBalanceReset;
+  final VoidCallback? onPaymentComplete;
 
   const BalanceCard({
     super.key,
     required this.balance,
     required this.monthlyBalance,
     this.lastBalanceReset,
+    this.onPaymentComplete,
   });
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[BalanceCard] Building - balance: $balance€, monthlyBalance: $monthlyBalance€');
-    debugPrint('[BalanceCard] Showing balance card (always visible for testing)');
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: GradientCard(
@@ -72,7 +71,12 @@ class BalanceCard extends StatelessWidget {
                     text: 'Pay Now',
                     icon: Icons.payment_rounded,
                     onPressed: () {
-                      context.push('/payment');
+                      context.push('/payment').then((result) {
+                        // ALWAYS refresh balance when returning from payment page
+                        if (onPaymentComplete != null) {
+                          onPaymentComplete!();
+                        }
+                      });
                     },
                   ),
               ],

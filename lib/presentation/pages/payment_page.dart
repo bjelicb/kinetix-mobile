@@ -60,6 +60,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   Future<void> _processPayment() async {
+    debugPrint('[PaymentPage] _processPayment START');
+    
+    final currentBalance = (_balanceData?['balance'] as num?)?.toDouble() ?? 0.0;
+    final currentMonthlyBalance = (_balanceData?['monthlyBalance'] as num?)?.toDouble() ?? 0.0;
+    debugPrint('[PaymentPage] Current balance before payment: balance=$currentBalance€, monthlyBalance=$currentMonthlyBalance€');
+    
     setState(() {
       _processing = true;
     });
@@ -69,9 +75,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final dio = Dio();
       final remoteDataSource = RemoteDataSource(dio, storage);
       
+      debugPrint('[PaymentPage] Calling clearBalance() API...');
       // TODO: In Phase 2, integrate with Stripe
       // For now, just clear the balance (manual payment)
       await remoteDataSource.clearBalance();
+      debugPrint('[PaymentPage] clearBalance() API call SUCCESS');
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,13 +89,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           ),
         );
         
+        debugPrint('[PaymentPage] Reloading balance after payment...');
         // Reload balance
         await _loadBalance();
+        debugPrint('[PaymentPage] Balance reloaded after payment');
         
-        // Navigate back
-        if (mounted) context.pop();
+        // Navigate back with result to trigger refresh on dashboard
+        if (mounted) {
+          debugPrint('[PaymentPage] Navigating back to previous page with success result');
+          context.pop(true); // Return true to indicate successful payment
+        }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('[PaymentPage] _processPayment ERROR: $e');
+      debugPrint('[PaymentPage] Stack trace: $stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -101,6 +116,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         setState(() {
           _processing = false;
         });
+        debugPrint('[PaymentPage] _processPayment END - processing flag set to false');
       }
     }
   }

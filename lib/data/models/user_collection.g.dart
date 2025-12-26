@@ -22,43 +22,48 @@ const UserCollectionSchema = CollectionSchema(
       name: r'clientProfileId',
       type: IsarType.string,
     ),
-    r'email': PropertySchema(
+    r'currentPlanId': PropertySchema(
       id: 1,
+      name: r'currentPlanId',
+      type: IsarType.string,
+    ),
+    r'email': PropertySchema(
+      id: 2,
       name: r'email',
       type: IsarType.string,
     ),
     r'isActive': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'isActive',
       type: IsarType.bool,
     ),
     r'lastSync': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'lastSync',
       type: IsarType.dateTime,
     ),
     r'name': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'name',
       type: IsarType.string,
     ),
     r'role': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'role',
       type: IsarType.string,
     ),
     r'serverId': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'serverId',
       type: IsarType.string,
     ),
     r'trainerId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'trainerId',
       type: IsarType.string,
     ),
     r'trainerName': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'trainerName',
       type: IsarType.string,
     )
@@ -103,6 +108,12 @@ int _userCollectionEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.currentPlanId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.email.length * 3;
   bytesCount += 3 + object.name.length * 3;
   bytesCount += 3 + object.role.length * 3;
@@ -129,14 +140,15 @@ void _userCollectionSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeString(offsets[0], object.clientProfileId);
-  writer.writeString(offsets[1], object.email);
-  writer.writeBool(offsets[2], object.isActive);
-  writer.writeDateTime(offsets[3], object.lastSync);
-  writer.writeString(offsets[4], object.name);
-  writer.writeString(offsets[5], object.role);
-  writer.writeString(offsets[6], object.serverId);
-  writer.writeString(offsets[7], object.trainerId);
-  writer.writeString(offsets[8], object.trainerName);
+  writer.writeString(offsets[1], object.currentPlanId);
+  writer.writeString(offsets[2], object.email);
+  writer.writeBool(offsets[3], object.isActive);
+  writer.writeDateTime(offsets[4], object.lastSync);
+  writer.writeString(offsets[5], object.name);
+  writer.writeString(offsets[6], object.role);
+  writer.writeString(offsets[7], object.serverId);
+  writer.writeString(offsets[8], object.trainerId);
+  writer.writeString(offsets[9], object.trainerName);
 }
 
 UserCollection _userCollectionDeserialize(
@@ -147,15 +159,16 @@ UserCollection _userCollectionDeserialize(
 ) {
   final object = UserCollection();
   object.clientProfileId = reader.readStringOrNull(offsets[0]);
-  object.email = reader.readString(offsets[1]);
+  object.currentPlanId = reader.readStringOrNull(offsets[1]);
+  object.email = reader.readString(offsets[2]);
   object.id = id;
-  object.isActive = reader.readBoolOrNull(offsets[2]);
-  object.lastSync = reader.readDateTime(offsets[3]);
-  object.name = reader.readString(offsets[4]);
-  object.role = reader.readString(offsets[5]);
-  object.serverId = reader.readString(offsets[6]);
-  object.trainerId = reader.readStringOrNull(offsets[7]);
-  object.trainerName = reader.readStringOrNull(offsets[8]);
+  object.isActive = reader.readBoolOrNull(offsets[3]);
+  object.lastSync = reader.readDateTime(offsets[4]);
+  object.name = reader.readString(offsets[5]);
+  object.role = reader.readString(offsets[6]);
+  object.serverId = reader.readString(offsets[7]);
+  object.trainerId = reader.readStringOrNull(offsets[8]);
+  object.trainerName = reader.readStringOrNull(offsets[9]);
   return object;
 }
 
@@ -169,20 +182,22 @@ P _userCollectionDeserializeProp<P>(
     case 0:
       return (reader.readStringOrNull(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (reader.readBoolOrNull(offset)) as P;
-    case 3:
-      return (reader.readDateTime(offset)) as P;
-    case 4:
       return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readBoolOrNull(offset)) as P;
+    case 4:
+      return (reader.readDateTime(offset)) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -534,6 +549,160 @@ extension UserCollectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'clientProfileId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'currentPlanId',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'currentPlanId',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'currentPlanId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'currentPlanId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'currentPlanId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'currentPlanId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'currentPlanId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'currentPlanId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'currentPlanId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'currentPlanId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'currentPlanId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      currentPlanIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'currentPlanId',
         value: '',
       ));
     });
@@ -1553,6 +1722,20 @@ extension UserCollectionQuerySortBy
     });
   }
 
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      sortByCurrentPlanId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentPlanId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      sortByCurrentPlanIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentPlanId', Sort.desc);
+    });
+  }
+
   QueryBuilder<UserCollection, UserCollection, QAfterSortBy> sortByEmail() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'email', Sort.asc);
@@ -1669,6 +1852,20 @@ extension UserCollectionQuerySortThenBy
       thenByClientProfileIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'clientProfileId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      thenByCurrentPlanId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentPlanId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      thenByCurrentPlanIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentPlanId', Sort.desc);
     });
   }
 
@@ -1797,6 +1994,14 @@ extension UserCollectionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<UserCollection, UserCollection, QDistinct>
+      distinctByCurrentPlanId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'currentPlanId',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<UserCollection, UserCollection, QDistinct> distinctByEmail(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1864,6 +2069,13 @@ extension UserCollectionQueryProperty
       clientProfileIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'clientProfileId');
+    });
+  }
+
+  QueryBuilder<UserCollection, String?, QQueryOperations>
+      currentPlanIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'currentPlanId');
     });
   }
 

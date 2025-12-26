@@ -1,6 +1,8 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/entities/ai_message.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../../data/repositories/admin_repository_impl.dart';
 import '../../data/datasources/remote_data_source.dart';
@@ -20,10 +22,14 @@ AdminRepository adminRepository(AdminRepositoryRef ref) {
 @riverpod
 class AdminController extends _$AdminController {
   late AdminRepository _repository;
+  late RemoteDataSource _remoteDataSource;
 
   @override
   FutureOr<Map<String, dynamic>> build() async {
     _repository = ref.read(adminRepositoryProvider);
+    final storage = FlutterSecureStorage();
+    final dio = Dio();
+    _remoteDataSource = RemoteDataSource(dio, storage);
     return await _repository.getAdminStats();
   }
 
@@ -244,6 +250,85 @@ class AdminController extends _$AdminController {
       developer.log('Error: $e', name: 'AdminController', error: e);
       developer.log('Stack trace: $stackTrace', name: 'AdminController');
       throw Exception('Failed to delete workout: ${e.toString()}');
+    }
+  }
+
+  /// Generate AI message for a client
+  Future<void> generateAIMessage({
+    required String clientId,
+    required AIMessageTrigger trigger,
+    String? customMessage,
+    AIMessageTone? tone,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      // Convert Flutter enum to backend format (camelCase -> UPPER_SNAKE_CASE)
+      String triggerString = _triggerToBackendFormat(trigger);
+      String? toneString = tone != null ? _toneToBackendFormat(tone) : null;
+      
+      await _remoteDataSource.generateAIMessage(
+        clientId: clientId,
+        trigger: triggerString,
+        customMessage: customMessage,
+        tone: toneString,
+        metadata: metadata,
+      );
+    } catch (e) {
+      debugPrint('[AdminController] Error generating AI message: $e');
+      throw Exception('Failed to generate AI message: ${e.toString()}');
+    }
+  }
+
+  /// Convert Flutter AIMessageTone enum to backend format
+  String _toneToBackendFormat(AIMessageTone tone) {
+    switch (tone) {
+      case AIMessageTone.aggressive:
+        return 'AGGRESSIVE';
+      case AIMessageTone.empathetic:
+        return 'EMPATHETIC';
+      case AIMessageTone.motivational:
+        return 'MOTIVATIONAL';
+      case AIMessageTone.warning:
+        return 'WARNING';
+    }
+  }
+
+  /// Convert Flutter AIMessageTrigger enum to backend format
+  /// missedWorkouts -> MISSED_WORKOUTS
+  /// weightSpike -> WEIGHT_SPIKE
+  /// sickDay -> SICK_DAY
+  /// streak -> STREAK
+  String _triggerToBackendFormat(AIMessageTrigger trigger) {
+    switch (trigger) {
+      case AIMessageTrigger.missedWorkouts:
+        return 'MISSED_WORKOUTS';
+      case AIMessageTrigger.streak:
+        return 'STREAK';
+      case AIMessageTrigger.weightSpike:
+        return 'WEIGHT_SPIKE';
+      case AIMessageTrigger.sickDay:
+        return 'SICK_DAY';
+    }
+  }
+
+  /// Get all AI messages (using batch endpoint)
+  Future<List<AIMessage>> getAllAIMessages() async {
+    try {
+      debugPrint('[AdminController] getAllAIMessages - using batch endpoint');
+      
+      // Use batch endpoint to get all messages at once
+      final messagesData = await _remoteDataSource.getAllAIMessages();
+      
+      // Map to AIMessage entities
+      final messages = messagesData.map((data) => AIMessage.fromJson(data)).toList();
+      
+      debugPrint('[AdminController] ✓ Loaded ${messages.length} messages from batch endpoint');
+      
+      // Messages are already sorted by backend (newest first)
+      return messages;
+    } catch (e) {
+      debugPrint('[AdminController] Error getting all AI messages: $e');
+      throw Exception('Failed to get AI messages: ${e.toString()}');
     }
   }
 }

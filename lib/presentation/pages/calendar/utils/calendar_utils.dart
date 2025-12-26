@@ -74,9 +74,115 @@ class CalendarUtils {
     }).toList();
   }
 
+  /// Calculate the last unlocked day from workouts
+  ///
+  /// Logic:
+  /// 1. If currentPlanId is set → use workouts from that plan (unlocked plan)
+  /// 2. If currentPlanId is null → find the FIRST plan from workout logs (by earliest date)
+  ///    This ensures we use the plan that should be unlocked next, not the newest assigned plan
+  ///
+  /// This is the last workout day that client has access to.
+  /// Days after this are LOCKED until client unlocks next week.
+  static DateTime? getLastUnlockedDay(List<Workout> workouts, String? currentPlanId) {
+    if (workouts.isEmpty) {
+      return null;
+    }
+
+    List<Workout> unlockedWorkouts;
+
+    if (currentPlanId != null) {
+      // Filter workouts ONLY from currentPlanId (unlocked plan)
+      unlockedWorkouts = workouts.where((w) => w.planId == currentPlanId).toList();
+    } else {
+      // currentPlanId is null - find the FIRST plan from workout logs (by earliest date)
+      // This is the plan that should be unlocked next (not the newest assigned plan)
+      // Group workouts by planId
+      final workoutsByPlan = <String, List<Workout>>{};
+      for (final workout in workouts) {
+        if (workout.planId != null) {
+          workoutsByPlan.putIfAbsent(workout.planId!, () => []).add(workout);
+        }
+      }
+
+      if (workoutsByPlan.isEmpty) {
+        return null;
+      }
+
+      // Find the plan with the EARLIEST workout date (first plan to unlock)
+      String? firstPlanId;
+      DateTime? firstPlanEarliestDate;
+
+      for (final entry in workoutsByPlan.entries) {
+        final planWorkouts = entry.value;
+        DateTime? earliestDate;
+        for (final workout in planWorkouts) {
+          final date = DateTime(workout.scheduledDate.year, workout.scheduledDate.month, workout.scheduledDate.day);
+          if (earliestDate == null || date.isBefore(earliestDate)) {
+            earliestDate = date;
+          }
+        }
+
+        // Choose plan with earliest start date (first plan to unlock)
+        if (earliestDate != null && (firstPlanEarliestDate == null || earliestDate.isBefore(firstPlanEarliestDate))) {
+          firstPlanId = entry.key;
+          firstPlanEarliestDate = earliestDate;
+        }
+      }
+
+      if (firstPlanId == null) {
+        return null;
+      }
+
+      // IMPORTANT: If currentPlanId is null, return null to show all workout logs
+      // This allows viewing workout logs from previous plans even without currentPlanId
+      // Unlock logic will only apply to future plans (days after the last workout date)
+      return null; // Return null to show all workout logs
+    }
+
+    if (unlockedWorkouts.isEmpty) {
+      return null;
+    }
+
+    // Find latest date from unlocked workouts
+    DateTime? latestDate;
+    for (final workout in unlockedWorkouts) {
+      final date = DateTime(workout.scheduledDate.year, workout.scheduledDate.month, workout.scheduledDate.day);
+      if (latestDate == null || date.isAfter(latestDate)) {
+        latestDate = date;
+      }
+    }
+
+    return latestDate;
+  }
+
   /// Get workout status for a specific date
-  static WorkoutStatus getWorkoutStatus(Workout? workout, DateTime date, Plan? activePlan) {
+  ///
+  /// IMPORTANT: This method shows workout status for ALL plans (current and previous).
+  /// If lastUnlockedDay is provided, it applies unlock logic (locks days after lastUnlockedDay).
+  /// If lastUnlockedDay is null, it shows status without unlock logic (for previous plans or when no currentPlanId).
+  static WorkoutStatus getWorkoutStatus(
+    Workout? workout,
+    DateTime date,
+    Plan? activePlan, // Keep for backward compatibility
+    DateTime? lastUnlockedDay, // If null, no unlock logic applied (for previous plans)
+  ) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+
+    // If workout exists, return its status (regardless of which plan it's from)
+    // This ensures workout logs from all plans are visible
     if (workout != null) {
+      // Apply unlock logic only if lastUnlockedDay is provided (for current plan)
+      // If lastUnlockedDay is null, show workout status without unlock logic
+      if (lastUnlockedDay != null) {
+        // Check if day is locked (after lastUnlockedDay)
+        if (dateOnly.isAfter(lastUnlockedDay)) {
+          return WorkoutStatus.locked;
+        }
+      }
+
+      // Return workout status
       if (workout.isRestDay) {
         return WorkoutStatus.restDay;
       }
@@ -89,13 +195,14 @@ class CalendarUtils {
       return WorkoutStatus.pending;
     }
 
-    // No workout log exists
-    // If there's an active plan, the date might be pending (workout not yet logged)
-    // If no active plan, the date is locked
-    if (activePlan != null) {
-      return WorkoutStatus.pending;
+    // No workout log exists for this day
+    // If it's a future day (after today), it's locked
+    // If it's a past day without workout, it's also locked (no plan for that day)
+    if (dateOnly.isAfter(todayOnly)) {
+      return WorkoutStatus.locked; // Future day without workout
     }
-
+    
+    // Past day without workout - show as locked but with faded appearance
     return WorkoutStatus.locked;
   }
 

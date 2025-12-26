@@ -5,4 +5,5 @@ export 'workout_collection.dart';
 export 'exercise_collection.dart';
 export 'checkin_collection.dart';
 export 'plan_collection.dart';
+export 'ai_message_collection.dart';
 

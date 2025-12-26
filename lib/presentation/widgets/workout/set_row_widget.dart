@@ -11,7 +11,10 @@ class SetRow extends StatelessWidget {
   final int setIndex;
   final Workout workout;
   final Key setKey;
+  final bool isLoading;
   final Function(String, int, int, String, Workout) onSaveValue;
+  final Function(int, int, double, Workout)? onWeightSelected; // NOVO - optional callback za weight picker
+  final Function(int, int, int, Workout)? onRepsSelected; // NOVO - optional callback za reps picker
   final Function(int, int, double?, Workout) onSaveRpe;
   final Function(int, int, Workout, Key) onDeleteSet;
   final Function(int, int, Workout) onToggleSetCompletion;
@@ -23,7 +26,10 @@ class SetRow extends StatelessWidget {
     required this.setIndex,
     required this.workout,
     required this.setKey,
+    this.isLoading = false,
     required this.onSaveValue,
+    this.onWeightSelected, // NOVO - optional
+    this.onRepsSelected, // NOVO - optional
     required this.onSaveRpe,
     required this.onDeleteSet,
     required this.onToggleSetCompletion,
@@ -90,20 +96,36 @@ class SetRow extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             
-            // Weight
+            // Weight - NOVO: Koristiti onWeightSelected ako postoji, inače onSaveValue
             Expanded(
               child: WorkoutInputField(
                 label: '${set.weight} kg',
-                onTap: () => onSaveValue('weight', exerciseIndex, setIndex, set.weight.toString(), workout),
+                onTap: () {
+                  if (onWeightSelected != null) {
+                    // Koristiti weight picker
+                    onWeightSelected!(exerciseIndex, setIndex, set.weight, workout);
+                  } else {
+                    // Fallback na numpad
+                    onSaveValue('weight', exerciseIndex, setIndex, set.weight.toString(), workout);
+                  }
+                },
               ),
             ),
             const SizedBox(width: 8),
             
-            // Reps
+            // Reps - NOVO: Koristiti onRepsSelected ako postoji, inače onSaveValue
             Expanded(
               child: WorkoutInputField(
                 label: '${set.reps} reps',
-                onTap: () => onSaveValue('reps', exerciseIndex, setIndex, set.reps.toString(), workout),
+                onTap: () {
+                  if (onRepsSelected != null) {
+                    // Koristiti reps picker
+                    onRepsSelected!(exerciseIndex, setIndex, set.reps, workout);
+                  } else {
+                    // Fallback na numpad
+                    onSaveValue('reps', exerciseIndex, setIndex, set.reps.toString(), workout);
+                  }
+                },
               ),
             ),
             const SizedBox(width: 8),
@@ -120,7 +142,9 @@ class SetRow extends StatelessWidget {
             // Complete Checkbox
             GestureDetector(
               onTap: () {
-                onToggleSetCompletion(exerciseIndex, setIndex, workout);
+                if (!isLoading) {
+                  onToggleSetCompletion(exerciseIndex, setIndex, workout);
+                }
               },
               child: Container(
                 width: 32,
@@ -138,13 +162,28 @@ class SetRow extends StatelessWidget {
                     width: 2,
                   ),
                 ),
-                child: set.isCompleted
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: AppColors.textPrimary,
-                        size: 20,
+                child: isLoading
+                    ? const SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+                            ),
+                          ),
+                        ),
                       )
-                    : null,
+                    : (set.isCompleted
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: AppColors.textPrimary,
+                            size: 20,
+                          )
+                        : null),
               ),
             ),
           ],

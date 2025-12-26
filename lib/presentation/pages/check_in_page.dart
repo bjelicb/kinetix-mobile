@@ -183,7 +183,7 @@ class _CheckInPageState extends State<CheckInPage> {
       const storage = FlutterSecureStorage();
       final dio = Dio();
       final remoteDataSource = RemoteDataSource(dio, storage);
-      final workoutRepository = WorkoutRepositoryImpl(localDataSource, remoteDataSource);
+      final workoutRepository = WorkoutRepositoryImpl(localDataSource, remoteDataSource, storage);
       
       final allWorkouts = await workoutRepository.getWorkouts();
       debugPrint('[CheckInPage] Loaded ${allWorkouts.length} total workouts');

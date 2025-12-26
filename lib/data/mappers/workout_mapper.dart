@@ -8,12 +8,15 @@ class WorkoutMapper {
       id: collection.id.toString(),
       serverId: collection.serverId.isEmpty ? null : collection.serverId,
       name: collection.name,
+      planId: collection.planId,
       scheduledDate: collection.scheduledDate,
+      dayOfWeek: collection.dayOfWeek,
       isCompleted: collection.isCompleted,
       isMissed: collection.isMissed,
       isRestDay: collection.isRestDay,
       exercises: exercises,
       isDirty: collection.isDirty,
+      isSyncing: collection.isSyncing,
       updatedAt: collection.updatedAt,
     );
   }
@@ -22,11 +25,14 @@ class WorkoutMapper {
     final collection = WorkoutCollection()
       ..serverId = entity.serverId ?? ''
       ..name = entity.name
+      ..planId = entity.planId
       ..scheduledDate = entity.scheduledDate
+      ..dayOfWeek = entity.dayOfWeek
       ..isCompleted = entity.isCompleted
       ..isMissed = entity.isMissed
       ..isRestDay = entity.isRestDay
       ..isDirty = entity.isDirty
+      ..isSyncing = entity.isSyncing
       ..updatedAt = entity.updatedAt;
 
     if (isarId != null) {

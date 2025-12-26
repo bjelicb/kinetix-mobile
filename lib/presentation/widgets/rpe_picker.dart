@@ -25,7 +25,10 @@ class _RpePickerState extends State<RpePicker> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _selectedRpe = widget.initialValue;
+    // NOVO: Migration logika - konvertovati postojeće RPE vrednosti u najbližu opciju
+    if (widget.initialValue != null) {
+      _selectedRpe = _migrateRpe(widget.initialValue);
+    }
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -41,17 +44,42 @@ class _RpePickerState extends State<RpePicker> with SingleTickerProviderStateMix
     super.dispose();
   }
 
+  // NOVO: RPE mapping sa 3 opcije
+  static const Map<String, double> _rpeOptions = {
+    'Lako': 4.5,   // 4-5 range
+    'Ok': 6.5,     // 6-7 range
+    'Teško': 8.5,  // 8-9 range
+  };
+
+  // NOVO: Migration logika - konvertovati postojeće RPE vrednosti u najbližu opciju
+  static double _migrateRpe(double? oldRpe) {
+    if (oldRpe == null) return 6.5; // Default to "Ok"
+    
+    // Pronađi najbližu opciju
+    double closestRpe = 6.5; // Default
+    double minDistance = double.infinity;
+    
+    for (final option in _rpeOptions.values) {
+      final distance = (oldRpe - option).abs();
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestRpe = option;
+      }
+    }
+    
+    return closestRpe;
+  }
+
   Color _getRpeColor(double rpe) {
-    if (rpe <= 4) return AppColors.success;
+    if (rpe <= 5) return AppColors.success;
     if (rpe <= 7) return AppColors.warning;
     return AppColors.error;
   }
 
   String _getRpeLabel(double rpe) {
-    if (rpe <= 4) return 'Easy';
-    if (rpe <= 6) return 'Moderate';
-    if (rpe <= 8) return 'Hard';
-    return 'Max';
+    if (rpe <= 5) return 'Lako';
+    if (rpe <= 7) return 'Ok';
+    return 'Teško';
   }
 
   @override
@@ -69,18 +97,11 @@ class _RpePickerState extends State<RpePicker> with SingleTickerProviderStateMix
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
                     'Rate of Perceived Exertion',
                     style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: AppColors.textSecondary,
-                    ),
                   ),
                 ],
               ),
@@ -128,79 +149,82 @@ class _RpePickerState extends State<RpePicker> with SingleTickerProviderStateMix
                 ),
               ),
             
-            // RPE Grid
+            // NOVO: RPE sa 3 opcije umesto 1-10 grid
             Padding(
               padding: const EdgeInsets.all(20),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 5,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1,
-                ),
-                itemCount: 10,
-                itemBuilder: (context, index) {
-                  final rpe = (index + 1).toDouble();
-                  final isSelected = _selectedRpe == rpe;
-                  
-                  return GestureDetector(
-                    onTap: () {
-                      AppHaptic.selection();
-                      setState(() {
-                        _selectedRpe = rpe;
-                      });
-                      _animationController.forward(from: 0.0).then((_) {
-                        if (mounted && _animationController.isAnimating) {
-                          _animationController.reverse();
-                        }
-                      });
-                      widget.onRpeSelected(rpe);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      child: Container(
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? LinearGradient(
-                                colors: [
-                                  _getRpeColor(rpe),
-                                  _getRpeColor(rpe).withValues(alpha: 0.7),
-                                ],
-                              )
-                            : AppGradients.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.textPrimary
-                              : AppColors.primary.withValues(alpha: 0.3),
-                          width: isSelected ? 2 : 1,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: _getRpeColor(rpe).withValues(alpha: 0.5),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
+              child: Row(
+                children: _rpeOptions.entries.map((entry) {
+                  final isSelected = _selectedRpe != null && 
+                      (_selectedRpe! - entry.value).abs() < 0.1;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: GestureDetector(
+                        onTap: () {
+                          AppHaptic.selection();
+                          setState(() {
+                            _selectedRpe = entry.value;
+                          });
+                          _animationController.forward(from: 0.0).then((_) {
+                            if (mounted && _animationController.isAnimating) {
+                              _animationController.reverse();
+                            }
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? LinearGradient(
+                                    colors: [
+                                      _getRpeColor(entry.value),
+                                      _getRpeColor(entry.value).withValues(alpha: 0.7),
+                                    ],
+                                  )
+                                : AppGradients.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.textPrimary
+                                  : AppColors.primary.withValues(alpha: 0.3),
+                              width: isSelected ? 2 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: _getRpeColor(entry.value).withValues(alpha: 0.5),
+                                      blurRadius: 12,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                entry.key,
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          rpe.toStringAsFixed(0),
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                entry.value.toStringAsFixed(1),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    ),
                   );
-                },
+                }).toList(),
               ),
             ),
             
@@ -212,8 +236,15 @@ class _RpePickerState extends State<RpePicker> with SingleTickerProviderStateMix
                 child: ElevatedButton(
                   onPressed: _selectedRpe != null
                       ? () {
-                          AppHaptic.medium();
-                          Navigator.pop(context);
+                          try {
+                            AppHaptic.medium();
+                            widget.onRpeSelected(_selectedRpe!);
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            debugPrint('[RpePicker] ❌ ERROR in confirm flow: $e');
+                          }
                         }
                       : null,
                   style: ElevatedButton.styleFrom(

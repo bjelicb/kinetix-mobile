@@ -7,6 +7,8 @@ class Plan {
   final String? trainerName; // Trainer's name for display
   final double? weeklyCost; // Weekly cost in euros
   final List<WorkoutDay> workoutDays;
+  final bool isFromHistory; // True if plan is from history (not current/unlocked)
+  final String planStatus; // 'current', 'previous', 'future'
   
   Plan({
     required this.id,
@@ -17,6 +19,8 @@ class Plan {
     this.trainerName,
     this.weeklyCost,
     required this.workoutDays,
+    this.isFromHistory = false, // Default to false (current plan)
+    this.planStatus = 'current', // Default to current
   });
 }
 

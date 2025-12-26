@@ -4,7 +4,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/user.dart';
 import '../../controllers/theme_controller.dart';
 import '../../pages/dashboard/utils/theme_utils.dart';
-import '../gradient_card.dart';
 
 /// Dashboard header widget with greeting, user info, avatar, and streak
 class DashboardHeader extends ConsumerWidget {
@@ -77,40 +76,6 @@ class DashboardHeader extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Streak Counter
-          GradientCard(
-            gradient: themeGradient as Gradient,
-            padding: const EdgeInsets.all(16),
-            margin: EdgeInsets.zero,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  color: AppColors.textPrimary,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '7 Day Streak',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Keep it up!',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
         ],
       ),

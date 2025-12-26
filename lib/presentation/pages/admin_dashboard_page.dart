@@ -18,6 +18,9 @@ import 'admin_dashboard/widgets/trainer_management_card.dart';
 import 'admin_dashboard/widgets/user_management_card.dart';
 import 'admin_dashboard/widgets/users_list.dart';
 import 'admin_dashboard/widgets/workout_management_card.dart';
+import 'admin_dashboard/widgets/ai_messages_management_card.dart';
+import 'admin_dashboard/modals/create_ai_message_modal.dart';
+import '../../domain/entities/ai_message.dart';
 import '../controllers/admin_controller.dart';
 
 class AdminDashboardPage extends ConsumerStatefulWidget {
@@ -37,6 +40,10 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   List<Map<String, dynamic>> _allWorkouts = [];
   bool _isLoadingWorkouts = false;
   Map<String, dynamic>? _workoutStats;
+  List<AIMessage> _allMessages = [];
+  bool _isLoadingMessages = false;
+  String _messageToneFilter = 'ALL';
+  String _messageSearchQuery = '';
 
   @override
   void initState() {
@@ -45,6 +52,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     _loadPlans();
     _loadWorkouts();
     _loadWorkoutStats();
+    _loadMessages();
   }
 
   Future<void> _loadPlans() async {
@@ -108,9 +116,9 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   }
 
   Future<void> _loadWorkouts() async {
-developer.log('═══════════════════════════════════════════════════════════', name: 'AdminDashboard');
-developer.log('[AdminDashboard] _loadWorkouts CALLED - starting refresh...', name: 'AdminDashboard');
-developer.log('[AdminDashboard] Current workout count: ${_allWorkouts.length}', name: 'AdminDashboard');
+    developer.log('═══════════════════════════════════════════════════════════', name: 'AdminDashboard');
+    developer.log('[AdminDashboard] _loadWorkouts CALLED - starting refresh...', name: 'AdminDashboard');
+    developer.log('[AdminDashboard] Current workout count: ${_allWorkouts.length}', name: 'AdminDashboard');
 
     if (!mounted) {
       developer.log('[AdminDashboard] _loadWorkouts ABORTED - widget not mounted', name: 'AdminDashboard');
@@ -124,7 +132,10 @@ developer.log('[AdminDashboard] Current workout count: ${_allWorkouts.length}', 
       developer.log('[AdminDashboard] _loadWorkouts - calling getAllWorkouts()...', name: 'AdminDashboard');
       final workouts = await ref.read(adminControllerProvider.notifier).getAllWorkouts();
 
-      developer.log('[AdminDashboard] _loadWorkouts - fetched ${workouts.length} workouts from API', name: 'AdminDashboard');
+      developer.log(
+        '[AdminDashboard] _loadWorkouts - fetched ${workouts.length} workouts from API',
+        name: 'AdminDashboard',
+      );
 
       if (workouts.isNotEmpty) {
         final workoutIds = workouts.take(5).map((w) => w['_id']?.toString() ?? 'no-id').join(", ");
@@ -132,16 +143,25 @@ developer.log('[AdminDashboard] Current workout count: ${_allWorkouts.length}', 
       }
 
       if (mounted) {
-        developer.log('[AdminDashboard] _loadWorkouts - updating state with ${workouts.length} workouts', name: 'AdminDashboard');
+        developer.log(
+          '[AdminDashboard] _loadWorkouts - updating state with ${workouts.length} workouts',
+          name: 'AdminDashboard',
+        );
         setState(() {
           _allWorkouts = workouts;
           _isLoadingWorkouts = false;
         });
-developer.log('[AdminDashboard] _loadWorkouts - state updated successfully', name: 'AdminDashboard');
-developer.log('[AdminDashboard] _loadWorkouts - NEW workout count: ${_allWorkouts.length}', name: 'AdminDashboard');
-developer.log('═══════════════════════════════════════════════════════════', name: 'AdminDashboard');
+        developer.log('[AdminDashboard] _loadWorkouts - state updated successfully', name: 'AdminDashboard');
+        developer.log(
+          '[AdminDashboard] _loadWorkouts - NEW workout count: ${_allWorkouts.length}',
+          name: 'AdminDashboard',
+        );
+        developer.log('═══════════════════════════════════════════════════════════', name: 'AdminDashboard');
       } else {
-        developer.log('[AdminDashboard] _loadWorkouts - widget not mounted, skipping state update', name: 'AdminDashboard');
+        developer.log(
+          '[AdminDashboard] _loadWorkouts - widget not mounted, skipping state update',
+          name: 'AdminDashboard',
+        );
       }
     } catch (e) {
       developer.log('[AdminDashboard] _loadWorkouts ERROR: $e', name: 'AdminDashboard', error: e);
@@ -169,6 +189,52 @@ developer.log('═════════════════════�
     } catch (e) {
       // Silently fail for stats
     }
+  }
+
+  Future<void> _loadMessages() async {
+    if (!mounted) return;
+    setState(() => _isLoadingMessages = true);
+    try {
+      final messages = await ref.read(adminControllerProvider.notifier).getAllAIMessages();
+      if (mounted) {
+        setState(() {
+          _allMessages = messages;
+          _isLoadingMessages = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMessages = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading messages: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  List<AIMessage> get _filteredMessages {
+    var filtered = _allMessages;
+
+    // Filter by tone
+    if (_messageToneFilter != 'ALL') {
+      final tone = _messageToneFilter.toUpperCase();
+      filtered = filtered.where((msg) {
+        return msg.tone.toString().split('.').last.toUpperCase() == tone;
+      }).toList();
+    }
+
+    // Filter by search query
+    if (_messageSearchQuery.isNotEmpty) {
+      final query = _messageSearchQuery.toLowerCase();
+      filtered = filtered.where((msg) {
+        return msg.message.toLowerCase().contains(query);
+      }).toList();
+    }
+
+    return filtered;
   }
 
   List<User> get _filteredUsers {
@@ -215,6 +281,7 @@ developer.log('═════════════════════�
               await _loadPlans();
               await _loadWorkouts();
               await _loadWorkoutStats();
+              await _loadMessages();
             },
             color: AppColors.primary,
             child: SingleChildScrollView(
@@ -364,6 +431,65 @@ developer.log('═════════════════════�
                               await _loadWorkoutStats();
                             },
                           ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // AI Messages Management Card
+                        AIMessagesManagementCard(
+                          onCreateMessage: () async {
+                            if (!mounted) return;
+                            final navigatorContext = context;
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                            final result = await showModalBottomSheet<bool>(
+                              context: navigatorContext,
+                              backgroundColor: AppColors.surface,
+                              isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              ),
+                              builder: (_) =>
+                                  CreateAIMessageModal(clients: _allUsers.where((u) => u.role == 'CLIENT').toList()),
+                            );
+
+                            // Handle result after modal closes
+                            if (!mounted) return;
+
+                            if (result == true) {
+                              // Show success message
+                              if (!mounted) return;
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Message sent successfully'),
+                                  backgroundColor: AppColors.success,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+
+                              // Refresh messages list after a longer delay to ensure backend has processed
+                              // and to avoid rate limiting (wait for throttler to reset)
+                              await Future.delayed(const Duration(seconds: 1));
+                              if (mounted) {
+                                _loadMessages();
+                              }
+                            } else if (result == false) {
+                              // Error message is already shown in modal, just refresh list in case of partial success
+                              await Future.delayed(const Duration(seconds: 1));
+                              if (mounted) {
+                                _loadMessages();
+                              }
+                            }
+                          },
+                          onSearchChanged: (query) {
+                            setState(() => _messageSearchQuery = query);
+                          },
+                          toneFilter: _messageToneFilter,
+                          onToneFilterChanged: (filter) {
+                            setState(() => _messageToneFilter = filter);
+                          },
+                          isLoading: _isLoadingMessages,
+                          messages: _filteredMessages,
                         ),
 
                         const SizedBox(height: AppSpacing.lg),

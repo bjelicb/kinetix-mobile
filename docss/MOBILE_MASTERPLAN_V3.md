@@ -284,12 +284,12 @@ Widget _buildExerciseVideo(Exercise exercise) {
 
 ## ✅ **CHECKLIST:**
 
-- [ ] Offline mode UX poboljšan
-- [ ] Network error handling poboljšan
-- [ ] Empty states dodati
-- [ ] Loading states poboljšani
+- [ ] Offline mode UX poboljšan (offline banner, queue indicator UI)
+- [x] Network error handling poboljšan ✅ **KOMPLETIRANO** (ErrorHandler sa SnackBar/Dialog - pre-empted tokom V2)
+- [x] Empty states dodati ✅ **KOMPLETIRANO** (EmptyState widget - pre-empted tokom V2)
+- [x] Loading states poboljšani ✅ **KOMPLETIRANO** (ShimmerLoader sa shimmer effect - pre-empted tokom V2)
 - [ ] **Plan history visualization implementirana**
-- [ ] **Sync conflict logging implementirana**
+- [ ] **Sync conflict logging implementirana** (Isar collection)
 - [ ] **Demo/Presentation mode implementiran (mock data, offline prezentacija)**
 - [ ] **Video Player Integration implementirana**
   - [ ] Video player widget

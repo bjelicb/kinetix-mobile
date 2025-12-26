@@ -16,8 +16,6 @@ class PaywallDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[Paywall:Block] Balance outstanding - Showing paywall dialog');
-    
     return PopScope(
       canPop: false, // Non-dismissible
       child: Dialog(
@@ -99,7 +97,8 @@ class PaywallDialog extends StatelessWidget {
                 text: 'View Payment Details',
                 icon: Icons.payment_rounded,
                 onPressed: () {
-                  Navigator.pop(context);
+                  debugPrint('[Paywall:Block] "View Payment Details" clicked - Navigating to payment page');
+                  // Call callback which will handle dialog closing and navigation
                   onNavigateToPayment?.call();
                 },
                 gradient: AppGradients.error,

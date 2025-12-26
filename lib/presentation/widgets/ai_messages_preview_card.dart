@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/ai_message.dart';
 import '../../data/datasources/remote_data_source.dart';
-import '../../data/datasources/local_data_source.dart';
 import '../controllers/common_providers.dart';
+import '../controllers/auth_controller.dart';
 import 'gradient_card.dart';
 import 'shimmer_loader.dart';
 
@@ -28,25 +28,35 @@ class _AIMessagesPreviewCardState extends ConsumerState<AIMessagesPreviewCard> {
   }
 
   Future<void> _loadMessages() async {
+    // Prevent multiple simultaneous loads
+    if (_isLoading) {
+      return;
+    }
+    
     setState(() => _isLoading = true);
     
     try {
-      final localDataSource = LocalDataSource();
-      final users = await localDataSource.getUsers();
+      // Get current user from auth controller (works on both mobile and web)
+      final user = ref.read(authControllerProvider).valueOrNull;
       
-      if (users.isEmpty) {
+      if (user == null) {
         _messages = [];
         return;
       }
       
-      final userId = users.first.serverId;
+      final userId = user.id;
       
       final remoteDataSource = RemoteDataSource(
         ref.read(dioProvider),
         ref.read(secureStorageProvider),
       );
       
-      final messagesData = await remoteDataSource.getAIMessages(userId);
+      // Get clientProfileId (not userId!)
+      final clientProfile = await remoteDataSource.getClientProfile(userId);
+      final clientProfileId = clientProfile['_id'] as String;
+      
+      final messagesData = await remoteDataSource.getAIMessages(clientProfileId);
+      
       _messages = messagesData.map((data) => AIMessage.fromJson(data)).toList();
       
       // Sort by created date (newest first) and take only latest 3
@@ -56,7 +66,7 @@ class _AIMessagesPreviewCardState extends ConsumerState<AIMessagesPreviewCard> {
       }
       
     } catch (e) {
-      debugPrint('[AIMessagesPreview] Error loading messages: $e');
+      debugPrint('[AIMessagesPreview] ❌ ERROR loading messages: $e');
       _messages = [];
     } finally {
       if (mounted) {
@@ -84,7 +94,10 @@ class _AIMessagesPreviewCardState extends ConsumerState<AIMessagesPreviewCard> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[AIMessagesPreview] build() - isLoading: $_isLoading, messages count: ${_messages.length}');
+    
     if (_isLoading) {
+      debugPrint('[AIMessagesPreview] Showing loading state');
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: const ShimmerLoader(
@@ -96,16 +109,24 @@ class _AIMessagesPreviewCardState extends ConsumerState<AIMessagesPreviewCard> {
     }
 
     if (_messages.isEmpty) {
+      debugPrint('[AIMessagesPreview] No messages, returning SizedBox.shrink()');
       return const SizedBox.shrink();
     }
+    
+    debugPrint('[AIMessagesPreview] Rendering card with ${_messages.length} messages');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: GradientCard(
         padding: const EdgeInsets.all(16),
         pressEffect: true,
-        onTap: () {
-          context.push('/ai-messages');
+        onTap: () async {
+          // Navigate to messages page and refresh when returning
+          await context.push('/ai-messages');
+          // Refresh messages after returning from messages page
+          if (mounted) {
+            _loadMessages();
+          }
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -203,6 +203,7 @@ class AdminRepositoryImpl implements AdminRepository {
     }
   }
 
+  @override
   Future<void> cancelPlan(String planId, String clientId) async {
     try {
       await _remoteDataSource.cancelPlan(planId, clientId);
